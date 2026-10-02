@@ -1,0 +1,5 @@
+sspanel.db
+.venv/
+__pycache__/
+*.pyc
+server.log

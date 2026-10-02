@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>仪表盘</h1>
+<p class="sub">欢迎回来，{{ user.username }} · 等级 {{ user.level }}</p>
+
+<div class="grid">
+  <div class="stat"><div class="label">剩余流量</div><div class="value green">{{ user.human_remain_traffic }}</div></div>
+  <div class="stat"><div class="label">已用流量</div><div class="value">{{ user.human_used_traffic }}</div></div>
+  <div class="stat"><div class="label">总流量</div><div class="value">{{ user.human_total_traffic }}</div></div>
+  <div class="stat"><div class="label">余额</div><div class="value">¥{{ '%.2f'|format(user.balance or 0) }}</div></div>
+</div>
+
+<div class="card">
+  <h2>流量使用</h2>
+  <div class="progress">
+    <div class="bar {% if user.used_percentage > 90 %}danger{% elif user.used_percentage > 70 %}warn{% endif %}" style="width:{{ user.used_percentage }}%"></div>
+  </div>
+  <p style="color:var(--muted);font-size:13px;margin-top:8px">已使用 {{ user.used_percentage }}% · 端口 {{ user.ss_port }}</p>
+</div>
+
+<div class="card">
+  <div class="row" style="justify-content:space-between">
+    <h2 style="margin:0">订阅链接</h2>
+    <button class="btn green" onclick="checkin()">每日签到</button>
+  </div>
+  <p class="sub">复制订阅地址到客户端，支持 ss / v2ray / trojan / clash</p>
+  <div class="codebox" id="sublink">{{ user.sub_link }}</div>
+  <div class="row" style="margin-top:12px">
+    <a class="btn ghost" href="{{ user.sub_link }}" target="_blank">ss 订阅</a>
+    <a class="btn ghost" href="{{ user.sub_link }}&sub_type=v2ray" target="_blank">v2ray 订阅</a>
+    <a class="btn ghost" href="{{ user.sub_link }}&sub_type=trojan" target="_blank">trojan 订阅</a>
+    <a class="btn ghost" href="{{ user.sub_link }}&sub_type=clash" target="_blank">clash 订阅</a>
+  </div>
+</div>
+
+<div class="card">
+  <h2>我的节点</h2>
+  {% if nodes %}
+  <table>
+    <tr><th>名称</th><th>类型</th><th>地址</th><th>端口</th><th>倍率</th></tr>
+    {% for n in nodes %}
+    <tr>
+      <td>{{ n.name }}</td>
+      <td><span class="badge">{{ n.node_type }}</span></td>
+      <td class="mono">{{ n.server }}</td>
+      <td class="mono">{{ n.ss_port }}</td>
+      <td>{{ n.enlarge_scale }}x</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="color:var(--muted)">当前等级暂无可用节点</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>邀请返利</h2>
+  <p class="sub">邀请好友注册，获得流量奖励</p>
+  <div class="codebox">{{ user.ref_link }}</div>
+  <div class="row" style="margin-top:12px">
+    <button class="btn ghost" onclick="copyText('{{ user.ref_link }}')">复制邀请链接</button>
+    <button class="btn ghost" onclick="genInvite()">生成邀请码</button>
+  </div>
+</div>
+
+<script>
+function copyText(t){ navigator.clipboard.writeText(t).then(()=>alert('已复制')); }
+function checkin(){
+  fetch('/api/checkin',{method:'POST'}).then(r=>r.json()).then(d=>{ alert(d.title+' '+d.subtitle); location.reload(); });
+}
+function genInvite(){
+  fetch('/api/gen/invitecode',{method:'POST',body:new URLSearchParams({num:1})}).then(r=>r.json()).then(d=>{
+    if(d.codes) alert('邀请码: '+d.codes[0]); else alert(d.title||'生成失败');
+  });
+}
+</script>
+{% endblock %}

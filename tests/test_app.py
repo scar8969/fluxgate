@@ -1,0 +1,230 @@
+"""End-to-end tests for sspanel-flask. Run: python tests/test_app.py"""
+import os
+import sys
+import tempfile
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+import pytest
+from sspanel import create_app, db, GB
+from sspanel.models import User, Goods, UserOrder, InviteCode, UserCheckInLog
+from sspanel.proxy import ProxyNode, UserTrafficLog
+from sspanel.sub import generate_subscription, generate_clash_config
+
+
+@pytest.fixture()
+def app():
+    tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
+    tmp.close()
+    app = create_app({
+        "TESTING": True,
+        "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp.name}",
+        "SECRET_KEY": "test",
+        "API_TOKEN": "test-token",
+    })
+    yield app
+    with app.app_context():
+        db.session.remove()
+        db.engine.dispose()
+    try:
+        os.unlink(tmp.name)
+    except PermissionError:
+        pass
+
+
+@pytest.fixture()
+def client(app):
+    return app.test_client()
+
+
+def _login(client, username="demo", password="demo123"):
+    return client.post("/login", data={"username": username, "password": password})
+
+
+# ---------- core model tests ----------
+
+def test_seed_data(app):
+    with app.app_context():
+        assert User.query.filter_by(username="admin").first().is_admin
+        assert User.query.filter_by(username="demo").first() is not None
+        assert ProxyNode.query.count() == 3
+        assert Goods.query.count() == 4
+
+
+def test_user_register_with_invite(app):
+    with app.app_context():
+        inviter = User.query.filter_by(username="demo").first()
+        code = InviteCode.gen_codes(inviter.id, 1)[0]
+        user = User.add_new_user("newbie", "n@x.com", "pass123", invitecode=code.code)
+        assert user.inviter_id == inviter.id
+        assert code.consumed
+        assert user.ss_port >= User.MIN_PORT
+        assert user.vmess_uuid
+
+
+def test_register_duplicate_username(app, client):
+    r = client.post("/register", data={"username": "demo", "email": "x@x.com", "password": "x"})
+    assert "用户名已存在" in r.get_data(as_text=True)
+
+
+def test_login_logout(app, client):
+    r = _login(client)
+    assert r.status_code == 302
+    assert "/dashboard" in r.headers["Location"]
+    client.get("/logout")
+    r2 = client.get("/dashboard")
+    assert r2.status_code == 302
+
+
+def test_checkin_once_per_day(app, client):
+    _login(client)
+    r1 = client.post("/api/checkin")
+    assert r1.get_json()["status"] == "success"
+    r2 = client.post("/api/checkin")
+    assert r2.get_json()["status"] == "error"
+
+
+def test_traffic_overflow_disables_user(app):
+    with app.app_context():
+        user = User.query.filter_by(username="demo").first()
+        user.total_traffic = 100
+        user.upload_traffic = 60
+        user.download_traffic = 60
+        db.session.commit()
+        assert user.overflow
+        assert user.enable is True  # not yet disabled
+    # simulate backend traffic report
+    with app.test_client() as c:
+        c.post("/api/proxy_configs/1", json={"data": [{"user_id": 2, "upload": 10, "download": 10}]},
+               headers={"X-API-Token": "test-token"})
+    with app.app_context():
+        user = User.query.filter_by(username="demo").first()
+        assert user.enable is False
+
+
+# ---------- subscription tests ----------
+
+def test_subscribe_ss(app, client):
+    with app.app_context():
+        user = User.query.filter_by(username="demo").first()
+        r = client.get(f"/api/subscribe?token={user.token}&sub_type=ss")
+        assert r.status_code == 200
+        import base64
+        decoded = base64.b64decode(r.get_data()).decode()
+        assert "ss://" in decoded
+        assert "hk01.example.com" in decoded
+
+
+def test_subscribe_v2ray(app, client):
+    with app.app_context():
+        user = User.query.filter_by(username="demo").first()
+        r = client.get(f"/api/subscribe?token={user.token}&sub_type=v2ray")
+        import base64, json
+        decoded = base64.b64decode(r.get_data()).decode()
+        assert "vmess://" in decoded
+
+
+def test_subscribe_clash(app, client):
+    with app.app_context():
+        user = User.query.filter_by(username="demo").first()
+        r = client.get(f"/api/subscribe?token={user.token}&sub_type=clash")
+        assert r.status_code == 200
+        assert "proxies:" in r.get_data(as_text=True)
+        assert "proxy-groups:" in r.get_data(as_text=True)
+
+
+def test_subscribe_level_gating(app):
+    with app.app_context():
+        user = User.query.filter_by(username="demo").first()
+        user.level = 0
+        db.session.commit()
+        nodes = ProxyNode.get_active_nodes(level=0)
+        assert all(n.level <= 0 for n in nodes)
+        assert len(nodes) == 2  # US-03 is level 1
+
+
+def test_subscribe_invalid_token(app, client):
+    assert client.get("/api/subscribe?token=999999").status_code == 404
+    assert client.get("/api/subscribe").status_code == 404
+
+
+# ---------- order / payment tests ----------
+
+def test_create_order_and_callback(app, client):
+    _login(client)
+    with app.app_context():
+        goods = Goods.query.first()
+        goods_id = goods.id
+    r = client.post("/api/orders", json={"goods_id": goods_id})
+    order = r.get_json()["order"]
+    assert order["status"] == 0
+    r2 = client.post("/api/callback/alipay", json={"out_trade_no": order["out_trade_no"]})
+    assert r2.get_json()["status"] == "success"
+    with app.app_context():
+        user = User.query.filter_by(username="demo").first()
+        assert user.total_traffic > GB * 20  # granted goods transfer
+
+
+def test_order_requires_login(app, client):
+    r = client.post("/api/orders", json={"goods_id": 1})
+    assert r.status_code == 401
+
+
+def test_proxy_configs_requires_auth(app, client):
+    r = client.get("/api/proxy_configs/1")
+    assert r.status_code == 401
+    r2 = client.get("/api/proxy_configs/1", headers={"X-API-Token": "test-token"})
+    assert r2.status_code == 200
+    assert r2.get_json()["node_type"] == "ss"
+
+
+def test_traffic_report_updates_user(app, client):
+    with app.app_context():
+        user = User.query.filter_by(username="demo").first()
+        before = user.used_traffic
+    r = client.post("/api/proxy_configs/1", json={"data": [{"user_id": 2, "upload": 5, "download": 7}]},
+                    headers={"X-API-Token": "test-token"})
+    assert r.status_code == 200
+    with app.app_context():
+        user = User.query.filter_by(username="demo").first()
+        assert user.used_traffic == before + 12
+        assert UserTrafficLog.query.count() >= 1
+
+
+def test_admin_required(app, client):
+    _login(client, "demo", "demo123")
+    assert client.get("/api/system_status").status_code == 403
+    _login(client, "admin", "admin123")
+    r = client.get("/api/system_status")
+    assert r.status_code == 200
+    assert "total_users" in r.get_json()
+
+
+# ---------- web pages ----------
+
+def test_pages_render(app, client):
+    _login(client)
+    for path in ["/dashboard", "/shop"]:
+        assert client.get(path).status_code == 200
+    _login(client, "admin", "admin123")
+    assert client.get("/admin").status_code == 200
+
+
+def test_user_settings_change_password(app, client):
+    _login(client)
+    r = client.post("/api/user/settings", data={"ss_password": "newpass123"})
+    assert r.get_json()["status"] == "success"
+    with app.app_context():
+        user = User.query.filter_by(username="demo").first()
+        assert user.ss_password == "newpass123"
+
+
+def test_gen_invitecode(app, client):
+    _login(client)
+    r = client.post("/api/gen/invitecode", data={"num": 1})
+    assert r.get_json()["status"] == "success"
+    assert len(r.get_json()["codes"]) == 1
+
+
+if __name__ == "__main__":
+    sys.exit(pytest.main([__file__, "-v"]))

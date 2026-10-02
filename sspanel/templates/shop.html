@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>商品中心</h1>
+<p class="sub">购买流量套餐，余额自动扣减（演示模式）</p>
+
+<div class="grid">
+  {% for g in goods %}
+  <div class="card" style="display:flex;flex-direction:column;gap:8px">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0;font-size:16px">{{ g.name }}</h2>
+      <span class="badge green">¥{{ '%.2f'|format(g.money) }}</span>
+    </div>
+    <p style="color:var(--muted);font-size:13px">{{ g.content }}</p>
+    <div style="color:var(--text);font-size:14px">{{ g.human_transfer }} · {{ g.days }}天 · Lv.{{ g.level }}</div>
+    <button class="btn" onclick="buy({{ g.id }})">立即购买</button>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="card">
+  <h2>我的订单</h2>
+  {% if orders %}
+  <table>
+    <tr><th>流水号</th><th>金额</th><th>状态</th><th>时间</th></tr>
+    {% for o in orders %}
+    <tr>
+      <td class="mono">{{ o.out_trade_no }}</td>
+      <td>¥{{ '%.2f'|format(o.amount) }}</td>
+      <td>
+        {% if o.status == 0 %}<span class="badge">待支付</span>
+        {% elif o.status == 1 %}<span class="badge">已支付</span>
+        {% else %}<span class="badge green">已完成</span>{% endif %}
+      </td>
+      <td>{{ o.created_at.strftime('%Y-%m-%d %H:%M') if o.created_at }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p style="color:var(--muted)">暂无订单</p>
+  {% endif %}
+</div>
+
+<script>
+function buy(goods_id){
+  fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({goods_id})})
+    .then(r=>r.json()).then(d=>{
+      if(d.order){
+        // demo: simulate alipay callback immediately
+        return fetch('/api/callback/alipay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({out_trade_no:d.order.out_trade_no})});
+      }
+      alert(d.error||'购买失败');
+    }).then(r=>r&&r.json()).then(d=>{ if(d) alert('购买成功! 流量已到账'); location.reload(); });
+}
+</script>
+{% endblock %}

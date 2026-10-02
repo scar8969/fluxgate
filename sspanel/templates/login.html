@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card" style="max-width:420px;margin:40px auto;">
+  <h1>登录</h1>
+  <p class="sub">欢迎回来，请登录你的账号</p>
+  <form method="post">
+    <label>用户名</label>
+    <input name="username" required autofocus>
+    <label>密码</label>
+    <input name="password" type="password" required>
+    <button class="btn" style="width:100%">登录</button>
+  </form>
+  <p style="margin-top:14px;font-size:13px;color:var(--muted);text-align:center">
+    没有账号？<a href="{{ url_for('web.register') }}">注册</a> · 演示账号 <b>demo / demo123</b> · 管理员 <b>admin / admin123</b>
+  </p>
+</div>
+{% endblock %}

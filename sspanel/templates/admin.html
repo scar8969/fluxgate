@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>管理后台</h1>
+<p class="sub">用户 / 节点 / 商品 / 订单 管理</p>
+
+<div class="grid">
+  <div class="stat"><div class="label">总用户</div><div class="value">{{ users|length }}+</div></div>
+  <div class="stat"><div class="label">节点数</div><div class="value">{{ nodes|length }}</div></div>
+  <div class="stat"><div class="label">商品数</div><div class="value">{{ goods|length }}</div></div>
+  <div class="stat"><div class="label">订单数</div><div class="value">{{ orders|length }}</div></div>
+</div>
+
+<div class="card">
+  <h2>用户管理</h2>
+  <table>
+    <tr><th>ID</th><th>用户名</th><th>端口</th><th>流量</th><th>等级</th><th>状态</th></tr>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.id }}</td>
+      <td>{{ u.username }}{% if u.is_admin %} <span class="badge">admin</span>{% endif %}</td>
+      <td class="mono">{{ u.ss_port }}</td>
+      <td>{{ u.human_used_traffic }} / {{ u.human_total_traffic }}</td>
+      <td>Lv.{{ u.level }}</td>
+      <td>{% if u.enable %}<span class="badge green">启用</span>{% else %}<span class="badge red">禁用</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="card">
+  <h2>节点管理</h2>
+  <table>
+    <tr><th>名称</th><th>类型</th><th>地址</th><th>端口</th><th>已用/总流量</th><th>等级</th></tr>
+    {% for n in nodes %}
+    <tr>
+      <td>{{ n.name }}</td>
+      <td><span class="badge">{{ n.node_type }}</span></td>
+      <td class="mono">{{ n.server }}</td>
+      <td class="mono">{{ n.ss_port }}</td>
+      <td>{{ n.human_used }} / {{ n.human_total }}</td>
+      <td>Lv.{{ n.level }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="card">
+  <h2>商品管理</h2>
+  <table>
+    <tr><th>名称</th><th>流量</th><th>价格</th><th>等级</th><th>天数</th><th>状态</th></tr>
+    {% for g in goods %}
+    <tr>
+      <td>{{ g.name }}</td>
+      <td>{{ g.human_transfer }}</td>
+      <td>¥{{ '%.2f'|format(g.money) }}</td>
+      <td>Lv.{{ g.level }}</td>
+      <td>{{ g.days }}天</td>
+      <td>{% if g.status == 1 %}<span class="badge green">上架</span>{% else %}<span class="badge red">下架</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ config.TITLE }} - {{ title or '' }}</title>
+<style>
+:root { --bg:#0f1115; --card:#171a21; --border:#232733; --text:#e6e9ef; --muted:#8b93a3; --accent:#4f8cff; --green:#3ddc84; --red:#ff5c5c; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background:var(--bg); color:var(--text); font-family:-apple-system,'Segoe UI',Roboto,sans-serif; min-height:100vh; }
+a { color:var(--accent); text-decoration:none; }
+.nav { display:flex; align-items:center; gap:24px; padding:14px 28px; background:var(--card); border-bottom:1px solid var(--border); }
+.nav .brand { font-weight:700; font-size:17px; letter-spacing:.5px; }
+.nav .brand span { color:var(--accent); }
+.nav a { color:var(--muted); font-size:14px; }
+.nav a:hover { color:var(--text); }
+.nav .spacer { flex:1; }
+.nav .user-chip { font-size:13px; color:var(--muted); }
+.container { max-width:1100px; margin:0 auto; padding:28px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px; margin-bottom:18px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; }
+.stat { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; }
+.stat .label { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.8px; }
+.stat .value { font-size:26px; font-weight:700; margin-top:6px; }
+.stat .value.green { color:var(--green); } .stat .value.red { color:var(--red); }
+table { width:100%; border-collapse:collapse; font-size:14px; }
+th,td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--border); }
+th { color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.6px; }
+.btn { display:inline-block; background:var(--accent); color:#fff; border:none; border-radius:8px; padding:9px 18px; font-size:14px; cursor:pointer; }
+.btn:hover { opacity:.88; }
+.btn.ghost { background:transparent; border:1px solid var(--border); color:var(--text); }
+.btn.green { background:var(--green); color:#0b0f14; font-weight:600; }
+.btn.red { background:var(--red); }
+input,select { background:#0d1016; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:9px 12px; font-size:14px; width:100%; margin-bottom:12px; }
+label { display:block; color:var(--muted); font-size:13px; margin-bottom:6px; }
+.flash { padding:12px 18px; border-radius:8px; margin-bottom:16px; font-size:14px; }
+.flash.error { background:rgba(255,92,92,.12); border:1px solid var(--red); color:var(--red); }
+.flash.success { background:rgba(61,220,132,.12); border:1px solid var(--green); color:var(--green); }
+.progress { height:8px; background:#0d1016; border-radius:4px; overflow:hidden; margin-top:8px; }
+.progress .bar { height:100%; background:var(--accent); border-radius:4px; }
+.progress .bar.warn { background:#ffb020; } .progress .bar.danger { background:var(--red); }
+.mono { font-family:'Cascadia Code',Consolas,monospace; font-size:13px; }
+.codebox { background:#0d1016; border:1px solid var(--border); border-radius:8px; padding:14px; font-family:'Cascadia Code',Consolas,monospace; font-size:12px; overflow-x:auto; word-break:break-all; }
+.badge { display:inline-block; padding:2px 10px; border-radius:20px; font-size:12px; background:rgba(79,140,255,.15); color:var(--accent); }
+.badge.green { background:rgba(61,220,132,.15); color:var(--green); }
+.badge.red { background:rgba(255,92,92,.15); color:var(--red); }
+h1 { font-size:22px; margin-bottom:4px; } h2 { font-size:18px; margin-bottom:14px; }
+.sub { color:var(--muted); font-size:14px; margin-bottom:20px; }
+.row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <div class="brand">⚡ {{ config.TITLE }}</div>
+  {% if session.get('user_id') %}
+  <a href="{{ url_for('web.dashboard') }}">仪表盘</a>
+  <a href="{{ url_for('web.shop') }}">商品中心</a>
+  {% if user and user.is_admin %}<a href="{{ url_for('web.admin') }}">管理后台</a>{% endif %}
+  <div class="spacer"></div>
+  <div class="user-chip">{{ user.username if user else '' }} · <a href="{{ url_for('web.logout') }}">退出</a></div>
+  {% endif %}
+</nav>
+<div class="container">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash {{ cat }}">{{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</div>
+</body>
+</html>

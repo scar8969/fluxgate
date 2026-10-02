@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="card" style="max-width:420px;margin:40px auto;">
+  <h1>注册</h1>
+  <p class="sub">邀请注册制，告别不良用户</p>
+  <form method="post">
+    <label>用户名</label>
+    <input name="username" required autofocus>
+    <label>邮箱</label>
+    <input name="email" type="email">
+    <label>密码</label>
+    <input name="password" type="password" required>
+    <label>邀请码（可选）</label>
+    <input name="invitecode" placeholder="填写邀请码可获得流量奖励">
+    {% if ref %}<input type="hidden" name="ref" value="{{ ref }}">{% endif %}
+    <button class="btn" style="width:100%">注册</button>
+  </form>
+  <p style="margin-top:14px;font-size:13px;color:var(--muted);text-align:center">
+    已有账号？<a href="{{ url_for('web.login') }}">登录</a>
+  </p>
+</div>
+{% endblock %}
