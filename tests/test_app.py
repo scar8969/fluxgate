@@ -523,11 +523,12 @@ def test_bot_demo_mode_runs(app):
     """bot.py main() in DEMO_MODE (no token) prints, doesn't crash."""
     import subprocess
     import tempfile as _tf
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     tmpdb = _tf.NamedTemporaryFile(suffix=".db", delete=False)
     tmpdb.close()
     env = dict(os.environ, DATABASE_URL=f"sqlite:///{tmpdb.name}")
     r = subprocess.run([sys.executable, "bot.py"], capture_output=True, text=True,
-                       cwd=r"C:\Users\priya\Desktop\sspanel-flask", timeout=60, env=env)
+                       cwd=repo, timeout=60, env=env)
     try:
         os.unlink(tmpdb.name)
     except PermissionError:
