@@ -30,6 +30,9 @@ def create_app(config=None):
     app.config["INVITE_NUM"] = int(os.environ.get("INVITE_NUM", 5))
     app.config["TITLE"] = os.environ.get("TITLE", "FluxGate")
     app.config["WEBHOOK_URL"] = os.environ.get("WEBHOOK_URL", "")  # optional paid-order webhook
+    app.config["TELEGRAM_BOT_TOKEN"] = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    app.config["TELEGRAM_CHAT_ID"] = os.environ.get("TELEGRAM_CHAT_ID", "")
+    app.config["PAYMENT_PROVIDER"] = os.environ.get("PAYMENT_PROVIDER", "demo")  # demo | stripe
     if config:
         app.config.update(config)
 

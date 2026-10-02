@@ -5,11 +5,19 @@ All notable changes to FluxGate.
 ## [Unreleased]
 
 ### Added
-- QR code generation for subscription links (`/api/subscribe/qr`)
-- Prometheus metrics endpoint (`/api/metrics`)
-- Webhook notifications on paid orders (`WEBHOOK_URL` env)
-- API documentation page (`/api/docs`)
-- CONTRIBUTING.md, SECURITY.md, issue/PR templates
+- Telegram bot (`bot.py`) — /link /traffic /checkin /subscribe /stats, DEMO_MODE
+- Telegram order-paid notifications (TELEGRAM_BOT_TOKEN + CHAT_ID)
+- Stripe payment adapter (test mode Checkout Sessions, provider pattern)
+- README banner + comparison table vs v2board/xboard/django-sspanel
+- Auto-release workflow (tag → GitHub release)
+
+## [0.3.0] - 2026-10-02
+
+### Added
+- SSE live traffic stream (`/api/stream`)
+- Load-test benchmark (`bench.py`) — 92 req/s, 0% errors measured
+- GHCR multi-arch Docker image workflow
+- Demo GIF + real coverage badge (86%)
 
 ## [0.2.0] - 2026-10-02
 

@@ -1,8 +1,10 @@
 # FluxGate ⚡
 
+![FluxGate](screenshots/banner.png)
+
 > Self-hosted proxy management panel — users, nodes, subscriptions, and billing in one process.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-38%2F38-passing-brightgreen) ![coverage](https://img.shields.io/badge/coverage-86%25-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml) [![Docker](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-45%2F45-passing-brightgreen) ![coverage](https://img.shields.io/badge/coverage-87%25-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml) [![Docker](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml)
 
 **FluxGate** is a self-hosted management panel for proxy services. Users register with invite codes, buy traffic packages, and get subscription links for any client. Admins manage nodes, goods, and orders from a built-in dashboard. Everything runs in a single Python process — no Redis, no Celery, no external services.
 
@@ -14,6 +16,22 @@ Proxy panels are either abandoned, bloated, or locked behind paid SaaS. FluxGate
 - **Multi-protocol** — ss / v2ray / trojan / clash subscriptions out of the box
 - **Self-contained** — web UI, admin, API, and billing all built in
 - **Demo-ready** — seeded accounts + a data simulator that makes the panel look alive in 30 seconds
+
+### vs other panels
+
+| | FluxGate | v2board | xboard | django-sspanel |
+|---|---|---|---|---|
+| Stack | Flask + SQLite | PHP + MySQL | PHP + MySQL | Django + Redis + Celery + MySQL |
+| Setup | `python run.py` | Docker + nginx + DB | Docker + nginx + DB | Docker + Redis + Celery |
+| Subscription formats | ss/v2ray/trojan/clash | ss/v2ray/trojan | ss/v2ray/trojan | ss/v2ray/clash |
+| QR codes | ✅ | ❌ | ❌ | ❌ |
+| Live SSE updates | ✅ | ❌ | ❌ | ❌ |
+| Prometheus metrics | ✅ | ❌ | ❌ | ❌ |
+| Telegram bot | ✅ | ❌ | ❌ | ❌ |
+| Webhooks | ✅ | ❌ | ❌ | ❌ |
+| API docs page | ✅ | ❌ | ❌ | ❌ |
+| Load-test tool | ✅ (bench.py) | ❌ | ❌ | ❌ |
+| License | GPL-3.0 | GPL-3.0 | MIT | GPL-3.0 |
 
 ## Features
 
@@ -32,6 +50,8 @@ Proxy panels are either abandoned, bloated, or locked behind paid SaaS. FluxGate
 - 📡 **Prometheus metrics** — `/api/metrics` for monitoring
 - 🔴 **Live SSE stream** — `/api/stream` real-time traffic + node status
 - 🔔 **Webhooks** — `order.paid` events on completed payments
+- 🤖 **Telegram bot** — check traffic, check in, get subscriptions from chat
+- 💳 **Stripe payments** — test-mode Checkout Sessions (provider pattern)
 - 📚 **API docs** — built-in `/api/docs` page
 - 👑 **Admin dashboard** — CRUD for users/nodes/goods, revenue stats
 
@@ -199,10 +219,12 @@ Measured with `bench.py` against a local instance (500 requests, 20 concurrent, 
 - [x] API docs page
 - [x] Load-test benchmark (bench.py)
 - [x] GHCR multi-arch Docker image
+- [x] Telegram bot + order notifications
+- [x] Stripe payment adapter (test mode)
+- [x] Auto-release workflow
 - [x] Docker + CI
-- [ ] Real Alipay/Stripe integration
+- [ ] Real Alipay integration
 - [ ] Multi-language i18n
-- [ ] Telegram bot for notifications
 - [ ] Prometheus metrics export
 
 ## Tests
@@ -211,7 +233,7 @@ Measured with `bench.py` against a local instance (500 requests, 20 concurrent, 
 .venv/Scripts/python -m pytest tests/ -v
 ```
 
-38 tests covering: seed data, invite-code registration, login/logout, daily check-in, traffic overflow auto-disable, subscription generation (ss/v2ray/clash), level gating, order lifecycle, payment callback, API auth, admin-only routes, admin CRUD, node heartbeat, admin analytics, CSV exports, login rate limiting, QR codes, Prometheus metrics, webhooks, API docs, page rendering.
+45 tests covering: seed data, invite-code registration, login/logout, daily check-in, traffic overflow auto-disable, subscription generation (ss/v2ray/clash), level gating, order lifecycle, payment callback, API auth, admin-only routes, admin CRUD, node heartbeat, admin analytics, CSV exports, login rate limiting, QR codes, Prometheus metrics, webhooks, API docs, SSE stream, Telegram bot commands, payment providers, Telegram notifications, page rendering.
 
 ## License
 

@@ -455,5 +455,136 @@ def test_sse_stream_emits_events(app, client):
     assert b"nodes" in chunk
 
 
+# ---------- Telegram bot ----------
+
+def _fake_db():
+    return {
+        "2": {"username": "demo", "level": 0,
+              "human_remain": "19.91 GB", "human_used": "91.43 MB",
+              "human_total": "20.00 GB", "sub_link": "http://x/sub?token=2",
+              "is_admin": False, "checkin": "Checked in! +50 MB",
+              "stats": {"total_users": 2, "revenue": 10.0, "total_nodes": 3, "online_nodes": 2}},
+        "1": {"username": "admin", "level": 9,
+              "human_remain": "100.00 GB", "human_used": "0 B",
+              "human_total": "100.00 GB", "sub_link": "http://x/sub?token=1",
+              "is_admin": True, "checkin": "Already checked in today!",
+              "stats": {"total_users": 2, "revenue": 10.0, "total_nodes": 3, "online_nodes": 2}},
+    }
+
+
+def test_bot_commands():
+    from bot import handle_update
+    db = _fake_db()
+    # fresh links file (no stale state from prior runs)
+    import bot as botmod
+    botmod._LINKS_FILE = os.path.join(tempfile.gettempdir(), "hermes-tg-links-test.json")
+    if os.path.exists(botmod._LINKS_FILE):
+        os.unlink(botmod._LINKS_FILE)
+    # /start
+    r = handle_update({"message": {"chat": {"id": 1}, "text": "/start"}}, lambda: db)
+    assert "FluxGate bot" in r
+    # /traffic without link
+    r = handle_update({"message": {"chat": {"id": 1}, "text": "/traffic"}}, lambda: db)
+    assert "Link your account" in r
+    # /link + /traffic (link persists to tg_links.json)
+    r = handle_update({"message": {"chat": {"id": 1}, "text": "/link 2"}}, lambda: db)
+    assert "Linked" in r
+    r = handle_update({"message": {"chat": {"id": 1}, "text": "/traffic"}}, lambda: db)
+    assert "Remaining: 19.91 GB" in r
+    # /subscribe
+    r = handle_update({"message": {"chat": {"id": 1}, "text": "/subscribe"}}, lambda: db)
+    assert "Subscription" in r
+    # /stats non-admin -> admin only
+    r = handle_update({"message": {"chat": {"id": 1}, "text": "/stats"}}, lambda: db)
+    assert "Admin only" in r
+    # /stats as admin (chat 2 linked to admin)
+    botmod._LINKS_FILE = os.path.join(tempfile.gettempdir(), "hermes-tg-links-test2.json")
+    if os.path.exists(botmod._LINKS_FILE):
+        os.unlink(botmod._LINKS_FILE)
+    r = handle_update({"message": {"chat": {"id": 2}, "text": "/link 1"}}, lambda: db)
+    assert "Linked" in r
+    r = handle_update({"message": {"chat": {"id": 2}, "text": "/stats"}}, lambda: db)
+    assert "2 users" in r
+    # unknown
+    r = handle_update({"message": {"chat": {"id": 1}, "text": "/nope"}}, lambda: db)
+    assert "Unknown command" in r
+
+
+def test_bot_demo_mode_runs(app):
+    """bot.py main() in DEMO_MODE (no token) prints, doesn't crash."""
+    import subprocess
+    r = subprocess.run([sys.executable, "bot.py"], capture_output=True, text=True,
+                       cwd=r"C:\Users\priya\Desktop\sspanel-flask", timeout=60)
+    assert r.returncode == 0
+    assert "DEMO_MODE" in r.stdout
+
+
+# ---------- payments ----------
+
+def test_payment_demo_provider(app, client):
+    """Default provider (demo) returns no payment_url — callback confirms."""
+    _login(client)
+    r = client.post("/api/orders", json={"goods_id": 1})
+    d = r.get_json()
+    assert d["status"] == "success"
+    assert "payment_url" not in d  # demo auto-confirms
+
+
+def test_payment_stripe_provider_no_key(app, client):
+    """Stripe provider without key falls back to demo behavior."""
+    app.config["PAYMENT_PROVIDER"] = "stripe"
+    _login(client)
+    r = client.post("/api/orders", json={"goods_id": 1})
+    assert r.get_json()["status"] == "success"
+
+
+def test_telegram_notify_fires(app):
+    """TELEGRAM_BOT_TOKEN+CHAT_ID set -> sendMessage attempted (fire-and-forget)."""
+    import threading
+    import json as _json
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    received = {}
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            length = int(self.headers["Content-Length"])
+            received["body"] = _json.loads(self.rfile.read(length))
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    srv = HTTPServer(("127.0.0.1", 0), Handler)
+    port = srv.server_address[1]
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    # point the bot API at our local server via monkeypatched urllib
+    import urllib.request as _ur
+    orig = _ur.urlopen
+    try:
+        def fake_urlopen(req, timeout=5):
+            return orig(_ur.Request(
+                f"http://127.0.0.1:{port}/sendMessage",
+                data=req.data, headers=req.headers), timeout=timeout)
+        _ur.urlopen = fake_urlopen
+        app.config["TELEGRAM_BOT_TOKEN"] = "test-token"
+        app.config["TELEGRAM_CHAT_ID"] = "123"
+        with app.test_client() as c:
+            c.post("/login", data={"username": "demo", "password": "demo123"})
+            r = c.post("/api/orders", json={"goods_id": 1})
+            out_trade_no = r.get_json()["order"]["out_trade_no"]
+            c.post("/api/callback/alipay", json={"out_trade_no": out_trade_no})
+        import time
+        for _ in range(20):
+            if received.get("body"):
+                break
+            time.sleep(0.1)
+        assert received.get("body"), "telegram sendMessage not fired"
+        assert "Order paid" in received["body"]["text"]
+    finally:
+        _ur.urlopen = orig
+        srv.shutdown()
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

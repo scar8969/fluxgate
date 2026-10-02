@@ -186,7 +186,13 @@ def create_order():
     order = UserOrder.create_order(user.id, goods.money)
     order.goods_id = goods.id
     db.session.commit()
-    return jsonify({"status": "success", "order": order.to_dict()})
+    # payment provider: stripe returns a checkout URL, demo returns None (auto-confirm)
+    from .payments import create_checkout
+    pay_url = create_checkout(order, user, current_app)
+    resp = {"status": "success", "order": order.to_dict()}
+    if pay_url:
+        resp["payment_url"] = pay_url
+    return jsonify(resp)
 
 
 @bp.route("/callback/alipay", methods=["POST"])
@@ -201,7 +207,35 @@ def alipay_callback():
     if not order:
         return jsonify({"error": "order not found or already finished"}), 404
     _fire_webhook(order)
+    _notify_telegram(order)
     return jsonify({"status": "success", "order": order.to_dict()})
+
+
+def _notify_telegram(order):
+    """Send an order.paid notification to TELEGRAM_CHAT_ID (fire-and-forget)."""
+    token = current_app.config.get("TELEGRAM_BOT_TOKEN", "")
+    chat_id = current_app.config.get("TELEGRAM_CHAT_ID", "")
+    if not token or not chat_id:
+        return
+    import threading
+    import urllib.request
+
+    text = (f"💰 Order paid\n"
+            f"Order: {order.out_trade_no}\n"
+            f"Amount: ¥{order.amount}\n"
+            f"User: #{order.user_id}")
+    payload = json.dumps({"chat_id": chat_id, "text": text}).encode()
+
+    def _send():
+        try:
+            req = urllib.request.Request(
+                f"https://api.telegram.org/bot{token}/sendMessage",
+                data=payload, headers={"Content-Type": "application/json"})
+            urllib.request.urlopen(req, timeout=5)
+        except Exception:
+            pass
+
+    threading.Thread(target=_send, daemon=True).start()
 
 
 def _fire_webhook(order):
