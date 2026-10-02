@@ -1,6 +1,6 @@
 """Web UI — register/login/dashboard/shop/admin. Served as a single-page
 dark dashboard."""
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
 
@@ -9,6 +9,20 @@ from .models import Goods, InviteCode, User, UserOrder
 from .proxy import ProxyNode
 
 bp = Blueprint("web", __name__)
+
+# simple in-memory login rate limiter: {ip: [timestamps]}
+_login_attempts = {}
+
+
+def _rate_limited(ip: str, limit: int = 5, window: int = 300) -> bool:
+    """True if the IP has exceeded `limit` login attempts in `window` seconds."""
+    now = datetime.utcnow()
+    attempts = [t for t in _login_attempts.get(ip, []) if now - t < timedelta(seconds=window)]
+    _login_attempts[ip] = attempts
+    if len(attempts) >= limit:
+        return True
+    attempts.append(now)
+    return False
 
 
 def _current_user():
@@ -52,7 +66,11 @@ def register():
 
 @bp.route("/login", methods=["GET", "POST"])
 def login():
+    ip = request.remote_addr or "unknown"
     if request.method == "POST":
+        if _rate_limited(ip):
+            flash("Too many attempts — try again in 5 minutes", "error")
+            return render_template("login.html"), 429
         username = request.form.get("username", "")
         password = request.form.get("password", "")
         user = User.query.filter_by(username=username).first()

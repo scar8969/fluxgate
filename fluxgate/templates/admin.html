@@ -13,6 +13,18 @@
 </div>
 
 <div class="card">
+  <div class="row" style="justify-content:space-between">
+    <h2 style="margin:0">Analytics</h2>
+    <div class="row">
+      <a class="btn ghost" style="padding:6px 12px;font-size:12px" href="/api/admin/export/users">Export users CSV</a>
+      <a class="btn ghost" style="padding:6px 12px;font-size:12px" href="/api/admin/export/orders">Export orders CSV</a>
+    </div>
+  </div>
+  <p class="sub">Revenue and new-user signups over the last 14 days</p>
+  <canvas id="analyticsChart" height="140" style="width:100%"></canvas>
+</div>
+
+<div class="card">
   <h2>Users</h2>
   <table>
     <tr><th>ID</th><th>Username</th><th>Port</th><th>Traffic</th><th>Level</th><th>Status</th><th>Actions</th></tr>
@@ -125,5 +137,29 @@ function delNode(id){ if(confirm('Delete node?')) return j(`/api/admin/nodes/${i
 function toggleUser(id){ return j(`/api/admin/users/${id}/toggle`, {method:'POST'}); }
 function resetTraffic(id){ return j(`/api/admin/users/${id}/reset_traffic`, {method:'POST'}); }
 function delGoods(id){ if(confirm('Delete goods?')) return j(`/api/admin/goods/${id}`, {method:'DELETE'}); }
+// analytics chart (revenue + signups, 14 days)
+fetch('/api/admin/analytics').then(r=>r.json()).then(d=>{
+  const cv = document.getElementById('analyticsChart');
+  if(!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width = cv.offsetWidth || 800, H = cv.height = 140;
+  const max = Math.max(1, ...d.revenue, ...d.users);
+  const pad = 24;
+  const x = i => pad + i * (W - pad*2) / Math.max(1, d.labels.length - 1);
+  const y = v => H - pad - (v / max) * (H - pad*2);
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle = '#232733'; ctx.fillStyle = '#8b93a3'; ctx.font = '10px sans-serif';
+  for(let i=0;i<d.labels.length;i++){
+    ctx.beginPath(); ctx.moveTo(x(i), pad); ctx.lineTo(x(i), H-pad); ctx.stroke();
+    ctx.fillText(d.labels[i].slice(5), x(i)-14, H-8);
+  }
+  const line = (arr, color) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    arr.forEach((v,i)=> i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v)));
+    ctx.stroke();
+  };
+  line(d.revenue, '#3ddc84');
+  line(d.users, '#4f8cff');
+});
 </script>
 {% endblock %}

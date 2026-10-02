@@ -2,7 +2,7 @@
 
 > Self-hosted proxy management panel — users, nodes, subscriptions, and billing in one process.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-26%2F26-passing-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-33%2F33-passing-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml)
 
 **FluxGate** is a self-hosted management panel for proxy services. Users register with invite codes, buy traffic packages, and get subscription links for any client. Admins manage nodes, goods, and orders from a built-in dashboard. Everything runs in a single Python process — no Redis, no Celery, no external services.
 
@@ -23,8 +23,11 @@ Proxy panels are either abandoned, bloated, or locked behind paid SaaS. FluxGate
 - 📊 **Traffic accounting** — per-user per-node logs, auto-disable on quota overflow
 - 📈 **Live charts** — 7-day upload/download traffic curves on the dashboard
 - 🟢 **Node health** — backend heartbeat → online/offline status
+- 🤖 **Sample backend agent** — `backend.py` polls config, simulates traffic, reports back (closes the loop)
+- 📈 **Admin analytics** — revenue + signup trends chart, CSV exports
 - 🎁 **Daily check-in** — random traffic reward, once per day
 - 🛡️ **Backend API** — token-authenticated node config + traffic reporting
+- 🚦 **Login rate limiting** — brute-force protection
 - 👑 **Admin dashboard** — CRUD for users/nodes/goods, revenue stats
 
 ## Architecture
@@ -89,11 +92,23 @@ Open http://127.0.0.1:5000
 
 Generates realistic usage: staggered signups, purchase history, diurnal traffic curves, node heartbeats. The panel instantly looks like a real service.
 
+### Run a backend node agent
+
+```bash
+.venv/Scripts/python backend.py --node 1 --users 5
+```
+
+The sample agent polls the panel for its config, simulates user traffic with a diurnal pattern, and reports usage back (which doubles as a heartbeat). Run one per node to see the full loop: panel ↔ backend ↔ traffic.
+
 ### Docker
 
 ```bash
 docker compose up -d
 ```
+
+### Deploy
+
+One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gunicorn + the app factory.
 
 ## API surface
 
@@ -116,6 +131,9 @@ docker compose up -d
 | DELETE | `/api/admin/goods/<id>` | delete goods (admin) |
 | POST | `/api/admin/users/<id>/toggle` | enable/disable user (admin) |
 | POST | `/api/admin/users/<id>/reset_traffic` | reset user traffic (admin) |
+| GET | `/api/admin/analytics?days=14` | revenue + signup trends (admin) |
+| GET | `/api/admin/export/users` | CSV export of users (admin) |
+| GET | `/api/admin/export/orders` | CSV export of orders (admin) |
 
 ## Screenshots
 
@@ -133,6 +151,9 @@ docker compose up -d
 - [x] Node heartbeat / online status
 - [x] Admin CRUD + revenue stats
 - [x] Demo data simulator
+- [x] Sample backend agent (panel ↔ backend loop)
+- [x] Admin analytics + CSV exports
+- [x] Login rate limiting
 - [x] Docker + CI
 - [ ] Real Alipay/Stripe integration
 - [ ] Multi-language i18n
@@ -145,7 +166,7 @@ docker compose up -d
 .venv/Scripts/python -m pytest tests/ -v
 ```
 
-26 tests covering: seed data, invite-code registration, login/logout, daily check-in, traffic overflow auto-disable, subscription generation (ss/v2ray/clash), level gating, order lifecycle, payment callback, API auth, admin-only routes, admin CRUD, node heartbeat, page rendering.
+33 tests covering: seed data, invite-code registration, login/logout, daily check-in, traffic overflow auto-disable, subscription generation (ss/v2ray/clash), level gating, order lifecycle, payment callback, API auth, admin-only routes, admin CRUD, node heartbeat, admin analytics, CSV exports, login rate limiting, page rendering.
 
 ## License
 

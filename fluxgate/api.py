@@ -333,3 +333,71 @@ def admin_reset_traffic(user_id):
     user.enable = True
     db.session.commit()
     return jsonify({"status": "success"})
+
+
+@bp.route("/admin/analytics")
+def admin_analytics():
+    """Revenue + user-growth trends over the last N days (admin)."""
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    days = min(request.args.get("days", 14, type=int), 90)
+    today = datetime.utcnow().date()
+    labels, revenue, users = [], [], []
+    for i in range(days - 1, -1, -1):
+        day = today - timedelta(days=i)
+        start = datetime(day.year, day.month, day.day)
+        end = start + timedelta(days=1)
+        labels.append(day.isoformat())
+        rev = db.session.query(db.func.sum(UserOrder.amount)).filter(
+            UserOrder.status == UserOrder.STATUS_FINISHED,
+            UserOrder.created_at >= start,
+            UserOrder.created_at < end,
+        ).scalar() or 0.0
+        revenue.append(round(rev, 2))
+        users.append(User.query.filter(
+            User.created_at >= start, User.created_at < end).count())
+    return jsonify({"labels": labels, "revenue": revenue, "users": users})
+
+
+@bp.route("/admin/export/users")
+def admin_export_users():
+    """CSV export of all users (admin)."""
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    import csv
+    import io
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["id", "username", "email", "level", "balance", "ss_port",
+                "upload_bytes", "download_bytes", "total_bytes", "enable", "created_at"])
+    for u in User.query.order_by(User.id).all():
+        w.writerow([u.id, u.username, u.email, u.level, u.balance, u.ss_port,
+                    u.upload_traffic, u.download_traffic, u.total_traffic,
+                    u.enable, u.created_at.isoformat() if u.created_at else ""])
+    from flask import Response
+    return Response(
+        buf.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=users.csv"},
+    )
+
+
+@bp.route("/admin/export/orders")
+def admin_export_orders():
+    """CSV export of all orders (admin)."""
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    import csv
+    import io
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["id", "user_id", "goods_id", "status", "amount", "out_trade_no", "created_at"])
+    for o in UserOrder.query.order_by(UserOrder.id).all():
+        w.writerow([o.id, o.user_id, o.goods_id, o.status, o.amount, o.out_trade_no,
+                    o.created_at.isoformat() if o.created_at else ""])
+    from flask import Response
+    return Response(
+        buf.getvalue(),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=orders.csv"},
+    )

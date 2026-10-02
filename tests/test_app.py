@@ -22,6 +22,8 @@ def app():
         "SECRET_KEY": "test",
         "API_TOKEN": "test-token",
     })
+    from fluxgate.web import _login_attempts
+    _login_attempts.clear()  # fresh rate-limiter state per test
     yield app
     with app.app_context():
         db.session.remove()
@@ -302,6 +304,67 @@ def test_node_heartbeat_marks_online(app, client):
     with app.app_context():
         node = ProxyNode.query.first()
         assert node.is_online() is True
+
+
+# ---------- analytics + exports ----------
+
+def test_admin_analytics(app, client):
+    _login(client, "admin", "admin123")
+    r = client.get("/api/admin/analytics?days=7")
+    assert r.status_code == 200
+    d = r.get_json()
+    assert len(d["labels"]) == 7
+    assert len(d["revenue"]) == 7
+    assert len(d["users"]) == 7
+
+
+def test_admin_analytics_requires_admin(app, client):
+    _login(client, "demo", "demo123")
+    assert client.get("/api/admin/analytics").status_code == 403
+
+
+def test_admin_export_users_csv(app, client):
+    _login(client, "admin", "admin123")
+    r = client.get("/api/admin/export/users")
+    assert r.status_code == 200
+    assert r.mimetype == "text/csv"
+    assert "username" in r.get_data(as_text=True)
+    assert "demo" in r.get_data(as_text=True)
+
+
+def test_admin_export_orders_csv(app, client):
+    _login(client, "admin", "admin123")
+    r = client.get("/api/admin/export/orders")
+    assert r.status_code == 200
+    assert r.mimetype == "text/csv"
+    assert "out_trade_no" in r.get_data(as_text=True)
+
+
+def test_admin_export_requires_admin(app, client):
+    _login(client, "demo", "demo123")
+    assert client.get("/api/admin/export/users").status_code == 403
+    assert client.get("/api/admin/export/orders").status_code == 403
+
+
+# ---------- login rate limiting ----------
+
+def test_login_rate_limit(app, client):
+    for _ in range(5):
+        client.post("/login", data={"username": "demo", "password": "wrong"})
+    r = client.post("/login", data={"username": "demo", "password": "demo123"})
+    assert r.status_code == 429
+    assert "Too many attempts" in r.get_data(as_text=True)
+
+
+def test_login_rate_limit_resets_after_window(app, client):
+    from fluxgate.web import _login_attempts, _rate_limited
+    with app.app_context():
+        _login_attempts.clear()
+    # simulate old attempts outside the window
+    from datetime import datetime, timedelta
+    with app.app_context():
+        _login_attempts["127.0.0.1"] = [datetime.utcnow() - timedelta(seconds=400)] * 5
+        assert _rate_limited("127.0.0.1") is False  # expired, allowed again
 
 
 if __name__ == "__main__":
