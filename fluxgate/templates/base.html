@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ config.TITLE }} - {{ title or '' }}</title>
 <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+<meta property="og:title" content="FluxGate — Self-hosted proxy panel">
+<meta property="og:description" content="Users, nodes, subscriptions (ss/v2ray/trojan/clash), billing in one Python process. No Redis. No Celery.">
+<meta property="og:type" content="website">
 <style>
 :root { --bg:#0f1115; --card:#171a21; --border:#232733; --text:#e6e9ef; --muted:#8b93a3; --accent:#4f8cff; --green:#3ddc84; --red:#ff5c5c; }
 * { margin:0; padding:0; box-sizing:border-box; }

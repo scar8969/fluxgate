@@ -3,7 +3,6 @@
 ![FluxGate](screenshots/banner.png)
 
 > Self-hosted proxy management panel — users, nodes, subscriptions, and billing in one process.
-
 ![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-64%2F64-passing-brightgreen) ![coverage](https://img.shields.io/badge/coverage-88%25-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml) [![Docker](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml) [![CodeQL](https://github.com/scar8969/fluxgate/actions/workflows/codeql.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/codeql.yml) [![Stargazers](https://img.shields.io/github/stars/scar8969/fluxgate)](https://github.com/scar8969/fluxgate/stargazers)
 
 **FluxGate** is a self-hosted management panel for proxy services. Users register with invite codes, buy traffic packages, and get subscription links for any client. Admins manage nodes, goods, and orders from a built-in dashboard. Everything runs in a single Python process — no Redis, no Celery, no external services.

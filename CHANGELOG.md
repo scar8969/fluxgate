@@ -5,6 +5,13 @@ All notable changes to FluxGate.
 ## [Unreleased]
 
 ### Added
+- GitHub profile README featuring FluxGate
+- Social preview image + og meta tags
+- OpenGraph tags on all pages
+
+## [0.7.0] - 2026-10-02
+
+### Added
 - CSRF protection (token-validated forms) + secure session cookies (HttpOnly, SameSite=Lax)
 - OpenAPI 3.0 spec (`/api/openapi.json`) + Swagger UI (`/api/swagger`)
 - SVG favicon, pyproject.toml, Makefile
