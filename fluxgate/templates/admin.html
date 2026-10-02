@@ -8,7 +8,7 @@
   <div class="stat"><div class="label">Nodes</div><div class="value">{{ nodes|length }}</div></div>
   <div class="stat"><div class="label">Goods</div><div class="value">{{ goods|length }}</div></div>
   <div class="stat"><div class="label">Orders</div><div class="value">{{ orders|length }}</div></div>
-  <div class="stat"><div class="label">Revenue</div><div class="value green">¥{{ revenue }}</div></div>
+  <div class="stat"><div class="label">Revenue</div><div class="value green">${{ revenue }}</div></div>
   <div class="stat"><div class="label">Nodes online</div><div class="value">{{ online_nodes }}/{{ nodes|length }}</div></div>
 </div>
 
@@ -90,7 +90,7 @@
     <div class="row">
       <input style="width:140px" id="g_name" placeholder="Name">
       <input style="width:100px" id="g_gb" placeholder="Traffic GB" value="100">
-      <input style="width:80px" id="g_money" placeholder="Price ¥" value="5">
+      <input style="width:80px" id="g_money" placeholder="Price $" value="5">
       <input style="width:80px" id="g_days" placeholder="Days" value="30">
       <button class="btn green" onclick="addGoods()">Save</button>
     </div>
@@ -101,7 +101,7 @@
     <tr>
       <td>{{ g.name }}</td>
       <td>{{ g.human_transfer }}</td>
-      <td>¥{{ '%.2f'|format(g.money) }}</td>
+      <td>${{ '%.2f'|format(g.money) }}</td>
       <td>Lv.{{ g.level }}</td>
       <td>{{ g.days }} days</td>
       <td>{% if g.status == 1 %}<span class="badge green">On sale</span>{% else %}<span class="badge red">Off sale</span>{% endif %}</td>

@@ -1,0 +1,56 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "panels": [
+    {
+      "id": 1,
+      "title": "Users",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "targets": [{"expr": "fluxgate_users_total", "legendFormat": "users"}],
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}}
+    },
+    {
+      "id": 2,
+      "title": "Revenue",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "targets": [{"expr": "fluxgate_revenue_total", "legendFormat": "revenue"}],
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}}
+    },
+    {
+      "id": 3,
+      "title": "Nodes online",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "targets": [{"expr": "fluxgate_nodes_online", "legendFormat": "online"}],
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}}
+    },
+    {
+      "id": 4,
+      "title": "Traffic (bytes)",
+      "type": "stat",
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "targets": [{"expr": "fluxgate_traffic_bytes_total", "legendFormat": "bytes"}],
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}}
+    },
+    {
+      "id": 5,
+      "title": "Orders over time",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "targets": [{"expr": "rate(fluxgate_orders_total[5m])", "legendFormat": "orders/s"}]
+    },
+    {
+      "id": 6,
+      "title": "Revenue over time",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "targets": [{"expr": "rate(fluxgate_revenue_total[5m])", "legendFormat": "revenue/s"}]
+    }
+  ],
+  "schemaVersion": 39,
+  "title": "FluxGate",
+  "uid": "fluxgate",
+  "version": 1
+}

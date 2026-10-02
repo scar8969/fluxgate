@@ -31,6 +31,7 @@ class ProxyNode(db.Model):
     enlarge_scale = db.Column(db.Float, default=1.0)
     sequence = db.Column(db.Integer, default=0)
     last_seen = db.Column(db.DateTime, nullable=True)  # heartbeat from backend
+    first_seen = db.Column(db.DateTime, nullable=True)  # first heartbeat (uptime)
 
     # ss-specific
     ss_method = db.Column(db.String(32), default="aes-256-gcm")
@@ -90,7 +91,23 @@ class ProxyNode(db.Model):
         d["human_used"] = traffic_format(self.used_traffic or 0)
         d["human_total"] = traffic_format(self.total_traffic or 0)
         d["online"] = self.is_online()
+        d["uptime"] = self.uptime()
         return d
+
+    def uptime(self):
+        """Human uptime string since first heartbeat (e.g. '3d 4h')."""
+        from datetime import datetime
+        if not self.first_seen:
+            return "0m"
+        delta = datetime.utcnow() - self.first_seen
+        days, rem = divmod(int(delta.total_seconds()), 86400)
+        hours, rem = divmod(rem, 3600)
+        mins = rem // 60
+        if days:
+            return f"{days}d {hours}h"
+        if hours:
+            return f"{hours}h {mins}m"
+        return f"{mins}m"
 
     def is_online(self):
         """Node is online if a backend reported traffic within the last 5 min."""

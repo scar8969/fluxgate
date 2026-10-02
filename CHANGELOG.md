@@ -5,6 +5,16 @@ All notable changes to FluxGate.
 ## [Unreleased]
 
 ### Added
+- USD currency (was ¥)
+- Grafana dashboard JSON + Prometheus/Grafana docker-compose stack
+- Per-user API keys (subscribe via api_key)
+- Node uptime tracking (first_seen)
+- Self-service password change
+- Dependabot, CodeQL, CODE_OF_CONDUCT, FUNDING
+
+## [0.4.0] - 2026-10-02
+
+### Added
 - Telegram bot (`bot.py`) — /link /traffic /checkin /subscribe /stats, DEMO_MODE
 - Telegram order-paid notifications (TELEGRAM_BOT_TOKEN + CHAT_ID)
 - Stripe payment adapter (test mode Checkout Sessions, provider pattern)

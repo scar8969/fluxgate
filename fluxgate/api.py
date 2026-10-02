@@ -41,9 +41,12 @@ def _api_authorized():
 @bp.route("/subscribe")
 def subscribe():
     token = request.args.get("token", "")
-    if not token:
-        return "not found", 404
-    user = User.query.filter_by(id=int(token)).first() if token.isdigit() else None
+    api_key = request.args.get("api_key", "")
+    user = None
+    if api_key:
+        user = User.query.filter_by(api_key=api_key).first()
+    elif token and token.isdigit():
+        user = User.query.filter_by(id=int(token)).first()
     if not user:
         return "not found", 404
     sub_type = request.args.get("sub_type", "ss")
@@ -86,6 +89,8 @@ def proxy_configs(node_id):
         return jsonify(node.get_proxy_configs())
     # POST: traffic report from backend — also acts as heartbeat
     node.last_seen = datetime.utcnow()
+    if not node.first_seen:
+        node.first_seen = node.last_seen
     data = request.get_json(force=True, silent=True) or {}
     for item in data.get("data", []):
         uid = item.get("user_id")
@@ -117,6 +122,36 @@ def user_settings():
         db.session.commit()
         return jsonify({"status": "success", "title": "Updated!", "subtitle": "Reconfigure your client with the new password."})
     return jsonify({"status": "error", "title": "Update failed!", "subtitle": "No new password provided."})
+
+
+@bp.route("/user/password", methods=["POST"])
+def change_password():
+    """Change the account login password (requires current password)."""
+    user = _current_user()
+    if not user:
+        return jsonify({"error": "login required"}), 401
+    data = request.get_json(force=True, silent=True) or request.form
+    current = data.get("current_password", "")
+    new = data.get("new_password", "")
+    if not user.check_password(current):
+        return jsonify({"status": "error", "title": "Wrong current password!"}), 400
+    if len(new) < 6:
+        return jsonify({"status": "error", "title": "New password too short (min 6 chars)!"}), 400
+    user.set_password(new)
+    db.session.commit()
+    return jsonify({"status": "success", "title": "Password changed!"})
+
+
+@bp.route("/user/api_key", methods=["POST"])
+def regenerate_api_key():
+    """Regenerate the user's API key (used for subscription links)."""
+    user = _current_user()
+    if not user:
+        return jsonify({"error": "login required"}), 401
+    from .models import _long_rand
+    user.api_key = _long_rand(32)
+    db.session.commit()
+    return jsonify({"status": "success", "api_key": user.api_key})
 
 
 @bp.route("/user/stats/traffic_chart")
@@ -222,7 +257,7 @@ def _notify_telegram(order):
 
     text = (f"💰 Order paid\n"
             f"Order: {order.out_trade_no}\n"
-            f"Amount: ¥{order.amount}\n"
+            f"Amount: ${order.amount}\n"
             f"User: #{order.user_id}")
     payload = json.dumps({"chat_id": chat_id, "text": text}).encode()
 

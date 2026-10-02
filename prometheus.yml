@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: fluxgate
+    static_configs:
+      - targets: ["fluxgate:5000"]
+    metrics_path: /api/metrics

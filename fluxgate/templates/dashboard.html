@@ -7,7 +7,7 @@
   <div class="stat"><div class="label">Remaining</div><div class="value green">{{ user.human_remain_traffic }}</div></div>
   <div class="stat"><div class="label">Used</div><div class="value">{{ user.human_used_traffic }}</div></div>
   <div class="stat"><div class="label">Total</div><div class="value">{{ user.human_total_traffic }}</div></div>
-  <div class="stat"><div class="label">Balance</div><div class="value">¥{{ '%.2f'|format(user.balance or 0) }}</div></div>
+  <div class="stat"><div class="label">Balance</div><div class="value">${{ '%.2f'|format(user.balance or 0) }}</div></div>
 </div>
 
 <div class="card">
@@ -69,6 +69,23 @@
   </div>
 </div>
 
+<div class="card">
+  <h2>Account</h2>
+  <div class="row" style="align-items:flex-start">
+    <div style="flex:1">
+      <label>API key (for subscription links)</label>
+      <div class="codebox" id="apikey">{{ user.api_key }}</div>
+      <button class="btn ghost" style="margin-top:8px" onclick="regenerateKey()">Regenerate API key</button>
+    </div>
+    <div style="flex:1">
+      <label>Change password</label>
+      <input id="pw_current" type="password" placeholder="Current password" style="margin-bottom:8px">
+      <input id="pw_new" type="password" placeholder="New password (min 6)" style="margin-bottom:8px">
+      <button class="btn ghost" onclick="changePw()">Change password</button>
+    </div>
+  </div>
+</div>
+
 <script>
 function copyText(t){ navigator.clipboard.writeText(t).then(()=>alert('Copied!')); }
 function checkin(){
@@ -78,6 +95,16 @@ function genInvite(){
   fetch('/api/gen/invitecode',{method:'POST',body:new URLSearchParams({num:1})}).then(r=>r.json()).then(d=>{
     if(d.codes) alert('Invite code: '+d.codes[0]); else alert(d.title||'Failed');
   });
+}
+function regenerateKey(){
+  fetch('/api/user/api_key',{method:'POST'}).then(r=>r.json()).then(d=>{
+    if(d.api_key){ document.getElementById('apikey').textContent = d.api_key; alert('API key regenerated!'); }
+  });
+}
+function changePw(){
+  fetch('/api/user/password',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({current_password:document.getElementById('pw_current').value, new_password:document.getElementById('pw_new').value})})
+    .then(r=>r.json()).then(d=>{ alert(d.title||'Done'); if(d.status==='success') location.reload(); });
 }
 // live traffic chart (7-day upload/download)
 fetch('/api/user/stats/traffic_chart').then(r=>r.json()).then(d=>{

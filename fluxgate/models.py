@@ -53,6 +53,7 @@ class User(db.Model):
     last_use_time = db.Column(db.DateTime, nullable=True)
     enable = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
+    api_key = db.Column(db.String(64), default=_long_rand, unique=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # ---- class methods (mirror original) ----
@@ -173,6 +174,7 @@ class User(db.Model):
             "used_percentage": self.used_percentage,
             "sub_link": self.sub_link,
             "ref_link": self.ref_link,
+            "api_key": self.api_key,
             "enable": self.enable,
             "is_admin": self.is_admin,
         }

@@ -1,4 +1,5 @@
 version: "3.8"
+
 services:
   fluxgate:
     build: .
@@ -9,4 +10,23 @@ services:
       - HOST=http://localhost:5000
     volumes:
       - ./fluxgate.db:/app/fluxgate/fluxgate.db
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/dashboards:ro
     restart: unless-stopped

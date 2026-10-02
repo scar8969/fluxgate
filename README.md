@@ -4,7 +4,7 @@
 
 > Self-hosted proxy management panel — users, nodes, subscriptions, and billing in one process.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-45%2F45-passing-brightgreen) ![coverage](https://img.shields.io/badge/coverage-87%25-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml) [![Docker](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-49%2F49-passing-brightgreen) ![coverage](https://img.shields.io/badge/coverage-86%25-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml) [![Docker](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml) [![CodeQL](https://github.com/scar8969/fluxgate/actions/workflows/codeql.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/codeql.yml)
 
 **FluxGate** is a self-hosted management panel for proxy services. Users register with invite codes, buy traffic packages, and get subscription links for any client. Admins manage nodes, goods, and orders from a built-in dashboard. Everything runs in a single Python process — no Redis, no Celery, no external services.
 
@@ -52,6 +52,9 @@ Proxy panels are either abandoned, bloated, or locked behind paid SaaS. FluxGate
 - 🔔 **Webhooks** — `order.paid` events on completed payments
 - 🤖 **Telegram bot** — check traffic, check in, get subscriptions from chat
 - 💳 **Stripe payments** — test-mode Checkout Sessions (provider pattern)
+- 🔑 **API keys** — per-user keys for subscription links
+- 🔐 **Password change** — self-service account security
+- 📡 **Grafana stack** — docker-compose with Prometheus + Grafana dashboard
 - 📚 **API docs** — built-in `/api/docs` page
 - 👑 **Admin dashboard** — CRUD for users/nodes/goods, revenue stats
 
@@ -149,6 +152,7 @@ One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gu
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/subscribe?token=<id>&sub_type=ss` | subscription links (ss/v2ray/trojan/clash) |
+| GET | `/api/subscribe?api_key=<key>&sub_type=ss` | subscription links via API key |
 | GET | `/api/subscribe/qr?token=<id>&sub_type=ss` | QR code PNG of subscription URL |
 | GET | `/api/metrics` | Prometheus metrics |
 | GET | `/api/stream` | live SSE stream (traffic + node status, login) |
@@ -156,6 +160,8 @@ One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gu
 | GET | `/api/proxy_configs/<node_id>` | node config for backends (X-API-Token auth) |
 | POST | `/api/proxy_configs/<node_id>` | traffic report + heartbeat from backends |
 | POST | `/api/user/settings` | change ss password |
+| POST | `/api/user/password` | change account password |
+| POST | `/api/user/api_key` | regenerate API key |
 | GET | `/api/user/stats/traffic_chart` | per-node traffic chart |
 | GET | `/api/user/stats/ref_chart` | referral chart |
 | POST | `/api/checkin` | daily check-in traffic reward |
@@ -221,7 +227,10 @@ Measured with `bench.py` against a local instance (500 requests, 20 concurrent, 
 - [x] GHCR multi-arch Docker image
 - [x] Telegram bot + order notifications
 - [x] Stripe payment adapter (test mode)
+- [x] API keys + password change
+- [x] Grafana + Prometheus stack
 - [x] Auto-release workflow
+- [x] CodeQL + Dependabot
 - [x] Docker + CI
 - [ ] Real Alipay integration
 - [ ] Multi-language i18n
@@ -233,7 +242,7 @@ Measured with `bench.py` against a local instance (500 requests, 20 concurrent, 
 .venv/Scripts/python -m pytest tests/ -v
 ```
 
-45 tests covering: seed data, invite-code registration, login/logout, daily check-in, traffic overflow auto-disable, subscription generation (ss/v2ray/clash), level gating, order lifecycle, payment callback, API auth, admin-only routes, admin CRUD, node heartbeat, admin analytics, CSV exports, login rate limiting, QR codes, Prometheus metrics, webhooks, API docs, SSE stream, Telegram bot commands, payment providers, Telegram notifications, page rendering.
+49 tests covering: seed data, invite-code registration, login/logout, daily check-in, traffic overflow auto-disable, subscription generation (ss/v2ray/clash), level gating, order lifecycle, payment callback, API auth, admin-only routes, admin CRUD, node heartbeat + uptime, admin analytics, CSV exports, login rate limiting, QR codes, Prometheus metrics, webhooks, API docs, SSE stream, Telegram bot commands, payment providers, Telegram notifications, API keys, password change, page rendering.
 
 ## License
 

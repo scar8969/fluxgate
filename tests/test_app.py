@@ -513,9 +513,17 @@ def test_bot_commands():
 def test_bot_demo_mode_runs(app):
     """bot.py main() in DEMO_MODE (no token) prints, doesn't crash."""
     import subprocess
+    import tempfile as _tf
+    tmpdb = _tf.NamedTemporaryFile(suffix=".db", delete=False)
+    tmpdb.close()
+    env = dict(os.environ, DATABASE_URL=f"sqlite:///{tmpdb.name}")
     r = subprocess.run([sys.executable, "bot.py"], capture_output=True, text=True,
-                       cwd=r"C:\Users\priya\Desktop\sspanel-flask", timeout=60)
-    assert r.returncode == 0
+                       cwd=r"C:\Users\priya\Desktop\sspanel-flask", timeout=60, env=env)
+    try:
+        os.unlink(tmpdb.name)
+    except PermissionError:
+        pass
+    assert r.returncode == 0, r.stderr[-500:]
     assert "DEMO_MODE" in r.stdout
 
 
@@ -584,6 +592,55 @@ def test_telegram_notify_fires(app):
     finally:
         _ur.urlopen = orig
         srv.shutdown()
+
+
+# ---------- API keys / password / uptime ----------
+
+def test_subscribe_via_api_key(app, client):
+    with app.app_context():
+        user = User.query.filter_by(username="demo").first()
+        key = user.api_key
+        assert key
+        r = client.get(f"/api/subscribe?api_key={key}&sub_type=ss")
+        assert r.status_code == 200
+        assert "ss://" in __import__("base64").b64decode(r.get_data()).decode()
+
+
+def test_regenerate_api_key(app, client):
+    _login(client)
+    with app.app_context():
+        old = User.query.filter_by(username="demo").first().api_key
+    r = client.post("/api/user/api_key")
+    assert r.get_json()["status"] == "success"
+    with app.app_context():
+        new = User.query.filter_by(username="demo").first().api_key
+        assert new != old
+
+
+def test_change_password(app, client):
+    _login(client)
+    r = client.post("/api/user/password", json={"current_password": "wrong", "new_password": "newpass1"})
+    assert r.status_code == 400
+    r = client.post("/api/user/password", json={"current_password": "demo123", "new_password": "newpass1"})
+    assert r.get_json()["status"] == "success"
+    # old password no longer works
+    client.get("/logout")
+    r = client.post("/login", data={"username": "demo", "password": "demo123"})
+    assert "Invalid username or password" in r.get_data(as_text=True)
+    r = client.post("/login", data={"username": "demo", "password": "newpass1"})
+    assert r.status_code == 302
+
+
+def test_node_uptime(app, client):
+    with app.app_context():
+        node = ProxyNode.query.first()
+        assert node.uptime() == "0m"  # no heartbeat yet
+        assert node.first_seen is None
+    client.post("/api/proxy_configs/1", json={"data": []}, headers={"X-API-Token": "test-token"})
+    with app.app_context():
+        node = ProxyNode.query.first()
+        assert node.first_seen is not None
+        assert node.last_seen is not None
 
 
 if __name__ == "__main__":
