@@ -51,6 +51,11 @@ def create_app(config=None):
     from .web import _csrf_token
     app.jinja_env.globals["csrf_token"] = _csrf_token
 
+    @app.context_processor
+    def _inject():
+        from flask import request as _req
+        return {"theme": "light" if _req.cookies.get("theme") == "light" else "dark"}
+
     with app.app_context():
         db.create_all()
         from .seed import seed

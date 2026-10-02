@@ -5,6 +5,13 @@ All notable changes to FluxGate.
 ## [Unreleased]
 
 ### Added
+- GitHub Pages live demo site (`docs/` + Pages workflow)
+- Admin backup/restore (full JSON export/import)
+- Dark/light theme toggle (cookie-based)
+
+## [0.8.0] - 2026-10-02
+
+### Added
 - GitHub profile README featuring FluxGate
 - Social preview image + og meta tags
 - OpenGraph tags on all pages

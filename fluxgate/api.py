@@ -613,3 +613,77 @@ def admin_export_orders():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=orders.csv"},
     )
+
+
+@bp.route("/admin/backup")
+def admin_backup():
+    """Full JSON backup of users, nodes, goods, orders (admin)."""
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    from datetime import datetime as _dt
+    backup = {
+        "version": VERSION,
+        "exported_at": _dt.utcnow().isoformat(),
+        "users": [u.to_dict() for u in User.query.all()],
+        "nodes": [n.to_dict() for n in ProxyNode.query.all()],
+        "goods": [g.to_dict() for g in Goods.query.all()],
+        "orders": [o.to_dict() for o in UserOrder.query.all()],
+    }
+    from flask import Response
+    return Response(
+        json.dumps(backup, indent=2, default=str),
+        mimetype="application/json",
+        headers={"Content-Disposition": "attachment; filename=fluxgate-backup.json"},
+    )
+
+
+@bp.route("/admin/restore", methods=["POST"])
+def admin_restore():
+    """Restore from a JSON backup (admin). Wipes current data."""
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    data = request.get_json(force=True, silent=True)
+    if not data or "users" not in data:
+        return jsonify({"error": "invalid backup"}), 400
+    # wipe
+    for m in (UserOrder, User, ProxyNode, Goods):
+        db.session.query(m).delete()
+    db.session.commit()
+    # restore users
+    for u in data.get("users", []):
+        user = User(username=u["username"], email=u.get("email", ""),
+                    ss_port=u.get("ss_port", 1025), ss_password=u.get("ss_password", ""),
+                    vmess_uuid=u.get("vmess_uuid", ""), balance=u.get("balance", 0),
+                    level=u.get("level", 0), upload_traffic=u.get("upload_traffic", 0),
+                    download_traffic=u.get("download_traffic", 0),
+                    total_traffic=u.get("total_traffic", GB * 10),
+                    enable=u.get("enable", True), is_admin=u.get("is_admin", False),
+                    api_key=u.get("api_key", ""))
+        user.password_hash = u.get("password_hash", "")
+        db.session.add(user)
+    for n in data.get("nodes", []):
+        server = n.get("server", "")
+        if isinstance(server, list):
+            server = ",".join(server)
+        db.session.add(ProxyNode(name=n.get("name", ""), server=server,
+                                 node_type=n.get("node_type", "ss"), ss_port=n.get("port", 8388),
+                                 ss_method=n.get("method", "aes-256-gcm"),
+                                 country=n.get("country", "CN"), level=n.get("level", 0),
+                                 used_traffic=n.get("used_traffic", 0),
+                                 total_traffic=n.get("total_traffic", GB),
+                                 enable=n.get("enable", True)))
+    for g in data.get("goods", []):
+        db.session.add(Goods(name=g.get("name", ""), content=g.get("content", ""),
+                             transfer=g.get("transfer", GB), money=g.get("money", 0),
+                             level=g.get("level", 0), days=g.get("days", 30),
+                             status=g.get("status", 1)))
+    for o in data.get("orders", []):
+        db.session.add(UserOrder(user_id=o.get("user_id", 0), goods_id=o.get("goods_id", 0),
+                                 status=o.get("status", 0), amount=o.get("amount", 0),
+                                 out_trade_no=o.get("out_trade_no", "")))
+    db.session.commit()
+    return jsonify({"status": "success",
+                    "restored": {"users": len(data.get("users", [])),
+                                 "nodes": len(data.get("nodes", [])),
+                                 "goods": len(data.get("goods", [])),
+                                 "orders": len(data.get("orders", []))}})

@@ -775,5 +775,58 @@ def test_admin_page_has_search(app, client):
     assert 'id="usersTable"' in html
 
 
+# ---------- backup / restore / theme ----------
+
+def test_admin_backup(app, client):
+    _login(client, "admin", "admin123")
+    r = client.get("/api/admin/backup")
+    assert r.status_code == 200
+    d = r.get_json()
+    assert "users" in d and "nodes" in d and "goods" in d and "orders" in d
+    assert len(d["users"]) >= 2  # admin + demo
+    assert len(d["nodes"]) == 3
+
+
+def test_admin_backup_requires_admin(app, client):
+    _login(client, "demo", "demo123")
+    assert client.get("/api/admin/backup").status_code == 403
+
+
+def test_admin_restore(app, client):
+    _login(client, "admin", "admin123")
+    # grab backup
+    backup = client.get("/api/admin/backup").get_json()
+    # mutate: add a user, then restore
+    client.post("/api/admin/nodes", json={"name": "SG-04", "server": "sg.example.com"})
+    with app.app_context():
+        assert ProxyNode.query.count() == 4
+    r = client.post("/api/admin/restore", json=backup)
+    assert r.status_code == 200
+    assert r.get_json()["status"] == "success"
+    with app.app_context():
+        assert ProxyNode.query.count() == 3  # restored to backup state
+
+
+def test_admin_restore_invalid(app, client):
+    _login(client, "admin", "admin123")
+    r = client.post("/api/admin/restore", json={"foo": "bar"})
+    assert r.status_code == 400
+
+
+def test_theme_cookie(app, client):
+    r = client.get("/login")
+    assert 'body class=""' in r.get_data(as_text=True)
+    client.set_cookie("theme", "light")
+    r = client.get("/login")
+    assert 'body class="light"' in r.get_data(as_text=True)
+
+
+def test_pages_workflow_exists(app):
+    import os
+    assert os.path.isfile(os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        ".github/workflows/pages.yml"))
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

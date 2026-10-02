@@ -3,7 +3,7 @@
 ![FluxGate](screenshots/banner.png)
 
 > Self-hosted proxy management panel — users, nodes, subscriptions, and billing in one process.
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-64%2F64-passing-brightgreen) ![coverage](https://img.shields.io/badge/coverage-88%25-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml) [![Docker](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml) [![CodeQL](https://github.com/scar8969/fluxgate/actions/workflows/codeql.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/codeql.yml) [![Stargazers](https://img.shields.io/github/stars/scar8969/fluxgate)](https://github.com/scar8969/fluxgate/stargazers)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-70%2F70-passing-brightgreen) ![coverage](https://img.shields.io/badge/coverage-89%25-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![Pages](https://github.com/scar8969/fluxgate/actions/workflows/pages.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/pages.yml) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml) [![Docker](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml) [![CodeQL](https://github.com/scar8969/fluxgate/actions/workflows/codeql.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/codeql.yml) [![Stargazers](https://img.shields.io/github/stars/scar8969/fluxgate)](https://github.com/scar8969/fluxgate/stargazers)
 
 **FluxGate** is a self-hosted management panel for proxy services. Users register with invite codes, buy traffic packages, and get subscription links for any client. Admins manage nodes, goods, and orders from a built-in dashboard. Everything runs in a single Python process — no Redis, no Celery, no external services.
 
@@ -54,6 +54,8 @@ Proxy panels are either abandoned, bloated, or locked behind paid SaaS. FluxGate
 - 🔑 **API keys** — per-user keys for subscription links
 - 🔐 **Password change** — self-service account security
 - 🛡️ **CSRF protection** — token-validated forms, HttpOnly + SameSite cookies
+- 💾 **Backup & restore** — one-click JSON export/import
+- 🌓 **Theme toggle** — dark/light mode
 - 📡 **Grafana stack** — docker-compose with Prometheus + Grafana dashboard
 - 📖 **OpenAPI + Swagger UI** — interactive API explorer
 - 📚 **API docs** — built-in `/api/docs` page
@@ -180,8 +182,12 @@ One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gu
 | GET | `/api/admin/analytics?days=14` | revenue + signup trends (admin) |
 | GET | `/api/admin/export/users` | CSV export of users (admin) |
 | GET | `/api/admin/export/orders` | CSV export of orders (admin) |
+| GET | `/api/admin/backup` | full JSON backup (admin) |
+| POST | `/api/admin/restore` | restore from JSON backup (admin) |
 
 ## Demo
+
+Live demo site: **[scar8969.github.io/fluxgate](https://scar8969.github.io/fluxgate)** (GitHub Pages)
 
 ![FluxGate demo](screenshots/demo.gif)
 
@@ -239,6 +245,9 @@ Measured with `bench.py` against a local instance (500 requests, 20 concurrent, 
 - [x] OpenAPI spec + Swagger UI
 - [x] Favicon + pyproject.toml + Makefile
 - [x] Admin user search
+- [x] Backup & restore
+- [x] Theme toggle
+- [x] GitHub Pages demo site
 - [x] Docker + CI
 - [ ] Real Alipay integration
 - [ ] Multi-language i18n
@@ -250,7 +259,7 @@ Measured with `bench.py` against a local instance (500 requests, 20 concurrent, 
 .venv/Scripts/python -m pytest tests/ -v
 ```
 
-64 tests covering: seed data, invite-code registration, login/logout, daily check-in, traffic overflow auto-disable, subscription generation (ss/v2ray/clash), level gating, order lifecycle, payment callback, API auth, admin-only routes, admin CRUD, node heartbeat + uptime, admin analytics, CSV exports, login rate limiting, QR codes, Prometheus metrics, webhooks, API docs, SSE stream, Telegram bot commands, payment providers, Telegram notifications, API keys, password change, landing page, health endpoint, CSRF, OpenAPI, Swagger, cookie flags, page rendering.
+70 tests covering: seed data, invite-code registration, login/logout, daily check-in, traffic overflow auto-disable, subscription generation (ss/v2ray/clash), level gating, order lifecycle, payment callback, API auth, admin-only routes, admin CRUD, node heartbeat + uptime, admin analytics, CSV exports, login rate limiting, QR codes, Prometheus metrics, webhooks, API docs, SSE stream, Telegram bot commands, payment providers, Telegram notifications, API keys, password change, landing page, health endpoint, CSRF, OpenAPI, Swagger, cookie flags, backup/restore, theme toggle, page rendering.
 
 ## License
 
