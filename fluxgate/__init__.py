@@ -1,13 +1,13 @@
-"""sspanel-flask: a from-scratch Flask rebuild of Ehco1996/django-sspanel.
+"""fluxgate: a self-hosted proxy management panel.
 
-Architecture mirrors the original Django app:
-  apps/sspanel  -> core domain (User, Goods, Order, InviteCode, checkin)
-  apps/proxy    -> proxy nodes (ss / vless / trojan) + traffic sync
-  apps/api      -> JSON API (subscribe, proxy_configs, orders, stats)
-  apps/sub      -> subscription link generation (ss / v2ray / clash / trojan)
+Architecture:
+  core    -> domain (User, Goods, Order, InviteCode, checkin)
+  proxy   -> proxy nodes (ss / vless / trojan) + traffic sync
+  api     -> JSON API (subscribe, proxy_configs, orders, stats)
+  sub     -> subscription link generation (ss / v2ray / clash / trojan)
 
-Rebuilt in Flask + SQLAlchemy with a SQLite backend. The original shipped
-Django admin; this ships a self-contained web UI + admin + API.
+Built with Flask + SQLAlchemy on SQLite. Ships a self-contained web UI +
+admin + API in a single process.
 """
 import os
 from flask import Flask
@@ -22,13 +22,13 @@ def create_app(config=None):
     app = Flask(__name__)
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-change-me")
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get(
-        "DATABASE_URL", "sqlite:///" + os.path.join(app.root_path, "sspanel.db")
+        "DATABASE_URL", "sqlite:///" + os.path.join(app.root_path, "fluxgate.db")
     )
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["HOST"] = os.environ.get("HOST", "http://127.0.0.1:5000")
     app.config["DEFAULT_TRAFFIC"] = int(os.environ.get("DEFAULT_TRAFFIC", 10 * GB))
     app.config["INVITE_NUM"] = int(os.environ.get("INVITE_NUM", 5))
-    app.config["TITLE"] = os.environ.get("TITLE", "sspanel-flask")
+    app.config["TITLE"] = os.environ.get("TITLE", "FluxGate")
     if config:
         app.config.update(config)
 

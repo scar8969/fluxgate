@@ -1,4 +1,4 @@
-"""Core domain models — mirrors apps/sspanel/models.py in the original."""
+"""Core domain models — User, Goods, Order, InviteCode, check-in, referral."""
 import random
 import string
 import uuid

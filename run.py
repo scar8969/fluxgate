@@ -1,5 +1,5 @@
 """Entry point: python run.py"""
-from sspanel import create_app
+from fluxgate import create_app
 
 app = create_app()
 

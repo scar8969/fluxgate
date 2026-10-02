@@ -1,4 +1,4 @@
-"""End-to-end tests for sspanel-flask. Run: python tests/test_app.py"""
+"""End-to-end tests for fluxgate. Run: python tests/test_app.py"""
 import os
 import sys
 import tempfile
@@ -6,10 +6,10 @@ import tempfile
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
-from sspanel import create_app, db, GB
-from sspanel.models import User, Goods, UserOrder, InviteCode, UserCheckInLog
-from sspanel.proxy import ProxyNode, UserTrafficLog
-from sspanel.sub import generate_subscription, generate_clash_config
+from fluxgate import create_app, db, GB
+from fluxgate.models import User, Goods, UserOrder, InviteCode, UserCheckInLog
+from fluxgate.proxy import ProxyNode, UserTrafficLog
+from fluxgate.sub import generate_subscription, generate_clash_config
 
 
 @pytest.fixture()

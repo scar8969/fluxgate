@@ -1,4 +1,4 @@
-sspanel.db
+fluxgate.db
 .venv/
 __pycache__/
 *.pyc

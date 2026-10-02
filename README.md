@@ -1,25 +1,34 @@
-# sspanel-flask
+# FluxGate
 
-> Rebuilt [Ehco1996/django-sspanel](https://github.com/Ehco1996/django-sspanel) (3,072★, archived) from scratch in **Flask + SQLAlchemy + SQLite**. Same architecture, same API surface, zero Django — and the subscription engine the original only half-shipped, now generating **ss / v2ray / trojan / clash** links for every node.
+> Self-hosted proxy management panel — users, nodes, subscriptions, and billing in one process.
 
 ![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-19%2F19-passing-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue)
 
-A self-hosted **Shadowsocks / V2Ray / Trojan management panel** — users register with invite codes, buy traffic packages, get subscription links for any client, and admins manage nodes, goods, and orders. The original was the legendary Django panel; this is a from-scratch Flask rebuild that runs on any machine with Python, no Redis, no Celery, no VPS required.
+**FluxGate** is a self-hosted management panel for proxy services. Users register with invite codes, buy traffic packages, and get subscription links for any client. Admins manage nodes, goods, and orders from a built-in dashboard. Everything runs in a single Python process — no Redis, no Celery, no external services.
 
----
+## Why FluxGate
 
-## Why this exists
+Proxy panels are either abandoned, bloated, or locked behind paid SaaS. FluxGate is:
 
-The original `django-sspanel` was THE Shadowsocks panel of its era (3k+ stars), but it's **archived** — Django + Redis + Celery + MySQL, a 2017-era stack that's painful to self-host today. This rebuild:
+- **Single-process** — Flask + SQLAlchemy + SQLite, `python run.py` and you're live
+- **Multi-protocol** — ss / v2ray / trojan / clash subscriptions out of the box
+- **Self-contained** — web UI, admin, API, and billing all built in
+- **Demo-ready** — seeded admin + demo accounts, demo payment flow, instant to explore
 
-- **Keeps the exact architecture** — `apps/sspanel` (users/goods/orders), `apps/proxy` (nodes), `apps/api` (JSON API), `apps/sub` (subscription engine)
-- **Drops the heavy stack** — Flask + SQLAlchemy + SQLite, one process, zero external services
-- **Ships what they never finished** — full **clash subscription** with proxy-groups + rules (the original only had partial clash support), per-node traffic charts, and a working demo payment flow
+## Features
+
+- 🔑 **Invite-code registration** — no spam users, referral rewards for inviters
+- 📦 **Goods & billing** — traffic packages with level gating, order lifecycle, payment callback
+- 🔗 **Subscription engine** — `ss://`, `vmess://`, `vless://`, `trojan://`, and full Clash YAML with proxy-groups
+- 📊 **Traffic accounting** — per-user per-node logs, auto-disable on quota overflow
+- 🎁 **Daily check-in** — random traffic reward, once per day
+- 🛡️ **Backend API** — token-authenticated node config + traffic reporting
+- 👑 **Admin dashboard** — users, nodes, goods, orders at a glance
 
 ## Architecture
 
 ```
-sspanel/
+fluxgate/
 ├── __init__.py      # app factory, config, db init
 ├── models.py        # User, Goods, UserOrder, InviteCode, UserCheckInLog, UserRefLog
 ├── proxy.py         # ProxyNode (ss/vless/trojan), UserTrafficLog
@@ -43,7 +52,7 @@ sspanel/
               ▼            ▼            ▼
         ┌──────────┐ ┌──────────┐ ┌──────────┐
         │  Users   │ │  Nodes   │ │  Orders  │
-        │ goods    │ │ ss/vless │ │ alipay   │
+        │ goods    │ │ ss/vless │ │ payment  │
         │ invite   │ │ trojan   │ │ callback │
         │ traffic  │ │ traffic  │ │          │
         └──────────┘ └──────────┘ └──────────┘
@@ -53,11 +62,6 @@ sspanel/
         │  Subscription engine   │  ss:// · vmess:// · vless:// · trojan:// · clash
         └────────────────────────┘
 ```
-
-## Screenshots
-
-![Dashboard](screenshots/dashboard.png)
-![Shop](screenshots/shop.png)
 
 ## Quick start
 
@@ -90,17 +94,10 @@ Open http://127.0.0.1:5000
 | POST | `/api/callback/alipay` | payment callback (demo) |
 | GET | `/api/system_status` | admin dashboard stats |
 
-## What the original shipped vs what this ships
+## Screenshots
 
-| Feature | django-sspanel (original) | sspanel-flask (this) |
-|---|---|---|
-| Stack | Django + Redis + Celery + MySQL | Flask + SQLAlchemy + SQLite |
-| Subscription | ss/v2ray/clash (partial) | ss/v2ray/trojan/clash (full, proxy-groups) |
-| Backend auth | API token | X-API-Token header |
-| Traffic sync | Celery task | synchronous POST handler |
-| Payment | Alipay face-to-face | demo callback flow |
-| Admin | Django admin | built-in dark dashboard |
-| Deploy | Docker + VPS | `python run.py` |
+![Dashboard](screenshots/dashboard.png)
+![Shop](screenshots/shop.png)
 
 ## Tests
 
@@ -112,4 +109,4 @@ Open http://127.0.0.1:5000
 
 ## License
 
-GPL-3.0 — same as the original.
+GPL-3.0
