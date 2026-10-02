@@ -2,7 +2,7 @@
 
 > Self-hosted proxy management panel — users, nodes, subscriptions, and billing in one process.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-38%2F38-passing-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml) ![coverage](https://img.shields.io/badge/coverage-~90%25-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-38%2F38-passing-brightgreen) ![coverage](https://img.shields.io/badge/coverage-86%25-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml) [![Docker](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml)
 
 **FluxGate** is a self-hosted management panel for proxy services. Users register with invite codes, buy traffic packages, and get subscription links for any client. Admins manage nodes, goods, and orders from a built-in dashboard. Everything runs in a single Python process — no Redis, no Celery, no external services.
 
@@ -30,6 +30,7 @@ Proxy panels are either abandoned, bloated, or locked behind paid SaaS. FluxGate
 - 🛡️ **Backend API** — token-authenticated node config + traffic reporting
 - 🚦 **Login rate limiting** — brute-force protection
 - 📡 **Prometheus metrics** — `/api/metrics` for monitoring
+- 🔴 **Live SSE stream** — `/api/stream` real-time traffic + node status
 - 🔔 **Webhooks** — `order.paid` events on completed payments
 - 📚 **API docs** — built-in `/api/docs` page
 - 👑 **Admin dashboard** — CRUD for users/nodes/goods, revenue stats
@@ -110,6 +111,15 @@ The sample agent polls the panel for its config, simulates user traffic with a d
 docker compose up -d
 ```
 
+### Docker image (GHCR)
+
+```bash
+docker pull ghcr.io/scar8969/fluxgate:latest
+docker run -p 5000:5000 -e SECRET_KEY=change-me ghcr.io/scar8969/fluxgate:latest
+```
+
+Multi-arch (amd64 + arm64), published on every `v*` tag.
+
 ### Deploy
 
 One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gunicorn + the app factory.
@@ -121,6 +131,7 @@ One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gu
 | GET | `/api/subscribe?token=<id>&sub_type=ss` | subscription links (ss/v2ray/trojan/clash) |
 | GET | `/api/subscribe/qr?token=<id>&sub_type=ss` | QR code PNG of subscription URL |
 | GET | `/api/metrics` | Prometheus metrics |
+| GET | `/api/stream` | live SSE stream (traffic + node status, login) |
 | GET | `/api/docs` | API documentation page |
 | GET | `/api/proxy_configs/<node_id>` | node config for backends (X-API-Token auth) |
 | POST | `/api/proxy_configs/<node_id>` | traffic report + heartbeat from backends |
@@ -142,11 +153,31 @@ One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gu
 | GET | `/api/admin/export/users` | CSV export of users (admin) |
 | GET | `/api/admin/export/orders` | CSV export of orders (admin) |
 
+## Demo
+
+![FluxGate demo](screenshots/demo.gif)
+
 ## Screenshots
 
 ![Dashboard](screenshots/dashboard.png)
 ![Shop](screenshots/shop.png)
 ![Admin](screenshots/admin.png)
+
+## Performance
+
+Measured with `bench.py` against a local instance (500 requests, 20 concurrent, `/api/metrics`):
+
+| Metric | Value |
+|---|---|
+| Throughput | **92 req/s** |
+| p50 latency | 204 ms |
+| p95 latency | 269 ms |
+| p99 latency | 286 ms |
+| Error rate | **0.0%** |
+
+```bash
+.venv/Scripts/python bench.py --requests 500 --concurrency 20
+```
 
 ## Roadmap
 
@@ -163,8 +194,11 @@ One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gu
 - [x] Login rate limiting
 - [x] QR code subscriptions
 - [x] Prometheus metrics
+- [x] Live SSE traffic stream
 - [x] Webhooks (order.paid)
 - [x] API docs page
+- [x] Load-test benchmark (bench.py)
+- [x] GHCR multi-arch Docker image
 - [x] Docker + CI
 - [ ] Real Alipay/Stripe integration
 - [ ] Multi-language i18n

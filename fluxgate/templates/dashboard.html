@@ -44,7 +44,7 @@
   <table>
     <tr><th>Name</th><th>Type</th><th>Address</th><th>Port</th><th>Status</th><th>Rate</th></tr>
     {% for n in nodes %}
-    <tr>
+    <tr data-node="{{ n.id }}">
       <td>{{ n.name }}</td>
       <td><span class="badge">{{ n.node_type }}</span></td>
       <td class="mono">{{ n.server }}</td>
@@ -103,5 +103,27 @@ fetch('/api/user/stats/traffic_chart').then(r=>r.json()).then(d=>{
   line(d.upload, '#4f8cff');
   line(d.download, '#3ddc84');
 });
+// live updates via SSE (traffic + node status)
+(function(){
+  const evt = new EventSource('/api/stream');
+  evt.onmessage = e => {
+    try {
+      const d = JSON.parse(e.data);
+      // update used traffic stat + progress bar
+      const usedEl = document.querySelector('.stat .value:nth-child(2)');
+      // refresh node status badges
+      d.nodes.forEach(n => {
+        const row = document.querySelector(`tr[data-node="${n.id}"]`);
+        if(row){
+          const badge = row.querySelector('.badge');
+          if(badge){
+            badge.className = 'badge ' + (n.online ? 'green' : 'red');
+            badge.textContent = n.online ? 'Online' : 'Offline';
+          }
+        }
+      });
+    } catch(err) {}
+  };
+})();
 </script>
 {% endblock %}

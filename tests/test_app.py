@@ -439,5 +439,21 @@ def test_docs_page(app, client):
     assert "API Documentation" in r.get_data(as_text=True)
 
 
+def test_sse_stream_requires_login(app, client):
+    assert client.get("/api/stream").status_code == 401
+
+
+def test_sse_stream_emits_events(app, client):
+    _login(client)
+    r = client.get("/api/stream")
+    assert r.status_code == 200
+    assert r.mimetype == "text/event-stream"
+    # pull one chunk from the generator directly (stream is infinite)
+    gen = r.response
+    chunk = next(gen)
+    assert b"data: " in chunk
+    assert b"nodes" in chunk
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

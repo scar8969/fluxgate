@@ -279,6 +279,31 @@ def metrics():
     return Response("\n".join(lines) + "\n", mimetype="text/plain; version=0.0.4")
 
 
+@bp.route("/stream")
+def stream():
+    """Server-Sent Events: live traffic + node status every 2s (login required)."""
+    user = _current_user()
+    if not user:
+        return jsonify({"error": "login required"}), 401
+    from flask import Response, stream_with_context
+    import time
+
+    def gen():
+        while True:
+            nodes = ProxyNode.get_active_nodes(level=user.level)
+            payload = {
+                "used": user.used_traffic,
+                "total": user.total_traffic,
+                "nodes": [{"id": n.id, "online": n.is_online(),
+                           "used": n.used_traffic or 0} for n in nodes],
+            }
+            yield f"data: {json.dumps(payload)}\n\n"
+            time.sleep(2)
+
+    return Response(stream_with_context(gen()), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
 @bp.route("/docs")
 def api_docs():
     """Human-readable API documentation page."""
