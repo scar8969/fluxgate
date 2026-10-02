@@ -36,7 +36,7 @@ def seed(app):
     if ProxyNode.query.count() == 0:
         db.session.add_all([
             ProxyNode(
-                name="HK-01 香港节点",
+                name="HK-01 Hong Kong",
                 server="hk01.example.com",
                 node_type="ss",
                 ss_method="aes-256-gcm",
@@ -47,7 +47,7 @@ def seed(app):
                 sequence=1,
             ),
             ProxyNode(
-                name="JP-02 东京节点",
+                name="JP-02 Tokyo",
                 server="jp02.example.com",
                 node_type="vless",
                 uuid="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
@@ -58,7 +58,7 @@ def seed(app):
                 sequence=2,
             ),
             ProxyNode(
-                name="US-03 洛杉矶节点",
+                name="US-03 Los Angeles",
                 server="us03.example.com",
                 node_type="trojan",
                 trojan_password="trojan-demo-pass",
@@ -73,10 +73,10 @@ def seed(app):
     # demo goods
     if Goods.query.count() == 0:
         db.session.add_all([
-            Goods(name="体验套餐", content="10GB 流量 / 7天", transfer=GB * 10, money=1.0, days=7, level=0, order=1),
-            Goods(name="基础套餐", content="100GB 流量 / 30天", transfer=GB * 100, money=5.0, days=30, level=0, order=2),
-            Goods(name="高级套餐", content="500GB 流量 / 90天", transfer=GB * 500, money=20.0, days=90, level=1, order=3),
-            Goods(name="旗舰套餐", content="1TB 流量 / 365天", transfer=GB * 1024, money=60.0, days=365, level=2, order=4),
+            Goods(name="Trial", content="10GB traffic / 7 days", transfer=GB * 10, money=1.0, days=7, level=0, order=1),
+            Goods(name="Basic", content="100GB traffic / 30 days", transfer=GB * 100, money=5.0, days=30, level=0, order=2),
+            Goods(name="Pro", content="500GB traffic / 90 days", transfer=GB * 500, money=20.0, days=90, level=1, order=3),
+            Goods(name="Ultimate", content="1TB traffic / 365 days", transfer=GB * 1024, money=60.0, days=365, level=2, order=4),
         ])
 
     db.session.commit()

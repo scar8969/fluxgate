@@ -1,19 +1,21 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>管理后台</h1>
-<p class="sub">用户 / 节点 / 商品 / 订单 管理</p>
+<h1>Admin</h1>
+<p class="sub">Manage users, nodes, goods, and orders</p>
 
 <div class="grid">
-  <div class="stat"><div class="label">总用户</div><div class="value">{{ users|length }}+</div></div>
-  <div class="stat"><div class="label">节点数</div><div class="value">{{ nodes|length }}</div></div>
-  <div class="stat"><div class="label">商品数</div><div class="value">{{ goods|length }}</div></div>
-  <div class="stat"><div class="label">订单数</div><div class="value">{{ orders|length }}</div></div>
+  <div class="stat"><div class="label">Total users</div><div class="value">{{ users|length }}+</div></div>
+  <div class="stat"><div class="label">Nodes</div><div class="value">{{ nodes|length }}</div></div>
+  <div class="stat"><div class="label">Goods</div><div class="value">{{ goods|length }}</div></div>
+  <div class="stat"><div class="label">Orders</div><div class="value">{{ orders|length }}</div></div>
+  <div class="stat"><div class="label">Revenue</div><div class="value green">¥{{ revenue }}</div></div>
+  <div class="stat"><div class="label">Nodes online</div><div class="value">{{ online_nodes }}/{{ nodes|length }}</div></div>
 </div>
 
 <div class="card">
-  <h2>用户管理</h2>
+  <h2>Users</h2>
   <table>
-    <tr><th>ID</th><th>用户名</th><th>端口</th><th>流量</th><th>等级</th><th>状态</th></tr>
+    <tr><th>ID</th><th>Username</th><th>Port</th><th>Traffic</th><th>Level</th><th>Status</th><th>Actions</th></tr>
     {% for u in users %}
     <tr>
       <td>{{ u.id }}</td>
@@ -21,16 +23,35 @@
       <td class="mono">{{ u.ss_port }}</td>
       <td>{{ u.human_used_traffic }} / {{ u.human_total_traffic }}</td>
       <td>Lv.{{ u.level }}</td>
-      <td>{% if u.enable %}<span class="badge green">启用</span>{% else %}<span class="badge red">禁用</span>{% endif %}</td>
+      <td>{% if u.enable %}<span class="badge green">Enabled</span>{% else %}<span class="badge red">Disabled</span>{% endif %}</td>
+      <td class="row">
+        {% if not u.is_admin %}
+        <button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="toggleUser({{ u.id }})">{% if u.enable %}Disable{% else %}Enable{% endif %}</button>
+        <button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="resetTraffic({{ u.id }})">Reset traffic</button>
+        {% endif %}
+      </td>
     </tr>
     {% endfor %}
   </table>
 </div>
 
 <div class="card">
-  <h2>节点管理</h2>
-  <table>
-    <tr><th>名称</th><th>类型</th><th>地址</th><th>端口</th><th>已用/总流量</th><th>等级</th></tr>
+  <div class="row" style="justify-content:space-between">
+    <h2 style="margin:0">Nodes</h2>
+    <button class="btn" onclick="showAddNode()">+ Add node</button>
+  </div>
+  <div id="addNodeForm" style="display:none;margin-top:14px;padding:14px;border:1px solid var(--border);border-radius:8px">
+    <div class="row">
+      <input style="width:140px" id="n_name" placeholder="Name">
+      <input style="width:180px" id="n_server" placeholder="Address">
+      <select style="width:100px" id="n_type"><option value="ss">ss</option><option value="vless">vless</option><option value="trojan">trojan</option></select>
+      <input style="width:80px" id="n_port" placeholder="Port" value="8388">
+      <input style="width:100px" id="n_gb" placeholder="Traffic GB" value="1000">
+      <button class="btn green" onclick="addNode()">Save</button>
+    </div>
+  </div>
+  <table style="margin-top:12px">
+    <tr><th>Name</th><th>Type</th><th>Address</th><th>Port</th><th>Used/Total</th><th>Status</th><th>Actions</th></tr>
     {% for n in nodes %}
     <tr>
       <td>{{ n.name }}</td>
@@ -38,26 +59,71 @@
       <td class="mono">{{ n.server }}</td>
       <td class="mono">{{ n.ss_port }}</td>
       <td>{{ n.human_used }} / {{ n.human_total }}</td>
-      <td>Lv.{{ n.level }}</td>
+      <td>{% if n.is_online() %}<span class="badge green">Online</span>{% else %}<span class="badge red">Offline</span>{% endif %}</td>
+      <td class="row">
+        <button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="toggleNode({{ n.id }})">{% if n.enable %}Disable{% else %}Enable{% endif %}</button>
+        <button class="btn red" style="padding:4px 10px;font-size:12px" onclick="delNode({{ n.id }})">Delete</button>
+      </td>
     </tr>
     {% endfor %}
   </table>
 </div>
 
 <div class="card">
-  <h2>商品管理</h2>
-  <table>
-    <tr><th>名称</th><th>流量</th><th>价格</th><th>等级</th><th>天数</th><th>状态</th></tr>
+  <div class="row" style="justify-content:space-between">
+    <h2 style="margin:0">Goods</h2>
+    <button class="btn" onclick="showAddGoods()">+ Add goods</button>
+  </div>
+  <div id="addGoodsForm" style="display:none;margin-top:14px;padding:14px;border:1px solid var(--border);border-radius:8px">
+    <div class="row">
+      <input style="width:140px" id="g_name" placeholder="Name">
+      <input style="width:100px" id="g_gb" placeholder="Traffic GB" value="100">
+      <input style="width:80px" id="g_money" placeholder="Price ¥" value="5">
+      <input style="width:80px" id="g_days" placeholder="Days" value="30">
+      <button class="btn green" onclick="addGoods()">Save</button>
+    </div>
+  </div>
+  <table style="margin-top:12px">
+    <tr><th>Name</th><th>Traffic</th><th>Price</th><th>Level</th><th>Days</th><th>Status</th><th>Actions</th></tr>
     {% for g in goods %}
     <tr>
       <td>{{ g.name }}</td>
       <td>{{ g.human_transfer }}</td>
       <td>¥{{ '%.2f'|format(g.money) }}</td>
       <td>Lv.{{ g.level }}</td>
-      <td>{{ g.days }}天</td>
-      <td>{% if g.status == 1 %}<span class="badge green">上架</span>{% else %}<span class="badge red">下架</span>{% endif %}</td>
+      <td>{{ g.days }} days</td>
+      <td>{% if g.status == 1 %}<span class="badge green">On sale</span>{% else %}<span class="badge red">Off sale</span>{% endif %}</td>
+      <td><button class="btn red" style="padding:4px 10px;font-size:12px" onclick="delGoods({{ g.id }})">Delete</button></td>
     </tr>
     {% endfor %}
   </table>
 </div>
+
+<script>
+function showAddNode(){ document.getElementById('addNodeForm').style.display = 'block'; }
+function showAddGoods(){ document.getElementById('addGoodsForm').style.display = 'block'; }
+const j = (url, opts) => fetch(url, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{})).then(r=>r.json()).then(d=>{ location.reload(); return d; });
+function addNode(){
+  return j('/api/admin/nodes', {method:'POST', body: JSON.stringify({
+    name: document.getElementById('n_name').value,
+    server: document.getElementById('n_server').value,
+    node_type: document.getElementById('n_type').value,
+    ss_port: document.getElementById('n_port').value,
+    total_traffic_gb: document.getElementById('n_gb').value,
+  })});
+}
+function addGoods(){
+  return j('/api/admin/goods', {method:'POST', body: JSON.stringify({
+    name: document.getElementById('g_name').value,
+    transfer_gb: document.getElementById('g_gb').value,
+    money: document.getElementById('g_money').value,
+    days: document.getElementById('g_days').value,
+  })});
+}
+function toggleNode(id){ return j(`/api/admin/nodes/${id}/toggle`, {method:'POST'}); }
+function delNode(id){ if(confirm('Delete node?')) return j(`/api/admin/nodes/${id}`, {method:'DELETE'}); }
+function toggleUser(id){ return j(`/api/admin/users/${id}/toggle`, {method:'POST'}); }
+function resetTraffic(id){ return j(`/api/admin/users/${id}/reset_traffic`, {method:'POST'}); }
+function delGoods(id){ if(confirm('Delete goods?')) return j(`/api/admin/goods/${id}`, {method:'DELETE'}); }
+</script>
 {% endblock %}

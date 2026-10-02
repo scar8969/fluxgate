@@ -35,10 +35,10 @@ def register():
         invitecode = request.form.get("invitecode", "").strip()
         ref = request.form.get("ref", "")
         if not username or not password:
-            flash("用户名和密码不能为空", "error")
+            flash("Username and password are required", "error")
             return render_template("register.html", ref=ref)
         if User.query.filter_by(username=username).first():
-            flash("用户名已存在", "error")
+            flash("Username already exists", "error")
             return render_template("register.html", ref=ref)
         try:
             user = User.add_new_user(username, email, password, invitecode=invitecode or None, ref=ref or None)
@@ -59,7 +59,7 @@ def login():
         if user and user.check_password(password):
             session["user_id"] = user.id
             return redirect(url_for("web.dashboard"))
-        flash("用户名或密码错误", "error")
+        flash("Invalid username or password", "error")
     return render_template("login.html")
 
 
@@ -97,4 +97,9 @@ def admin():
     nodes = ProxyNode.query.order_by(ProxyNode.sequence).all()
     goods = Goods.query.order_by(Goods.order).all()
     orders = UserOrder.query.order_by(UserOrder.id.desc()).limit(20).all()
-    return render_template("admin.html", user=user, users=users, nodes=nodes, goods=goods, orders=orders)
+    revenue = db.session.query(db.func.sum(UserOrder.amount)).filter(
+        UserOrder.status == UserOrder.STATUS_FINISHED).scalar() or 0.0
+    online_nodes = sum(1 for n in nodes if n.is_online())
+    return render_template("admin.html", user=user, users=users, nodes=nodes,
+                           goods=goods, orders=orders,
+                           revenue=round(revenue, 2), online_nodes=online_nodes)

@@ -64,7 +64,7 @@ def test_user_register_with_invite(app):
 
 def test_register_duplicate_username(app, client):
     r = client.post("/register", data={"username": "demo", "email": "x@x.com", "password": "x"})
-    assert "用户名已存在" in r.get_data(as_text=True)
+    assert "Username already exists" in r.get_data(as_text=True)
 
 
 def test_login_logout(app, client):
@@ -224,6 +224,84 @@ def test_gen_invitecode(app, client):
     r = client.post("/api/gen/invitecode", data={"num": 1})
     assert r.get_json()["status"] == "success"
     assert len(r.get_json()["codes"]) == 1
+
+
+# ---------- admin CRUD ----------
+
+def test_admin_add_node(app, client):
+    _login(client, "admin", "admin123")
+    r = client.post("/api/admin/nodes", json={
+        "name": "SG-04", "server": "sg04.example.com", "node_type": "ss",
+        "ss_port": 9000, "total_traffic_gb": 500,
+    })
+    assert r.get_json()["status"] == "success"
+    assert r.get_json()["node"]["name"] == "SG-04"
+    with app.app_context():
+        assert ProxyNode.query.filter_by(name="SG-04").first() is not None
+
+
+def test_admin_node_toggle_delete(app, client):
+    _login(client, "admin", "admin123")
+    with app.app_context():
+        nid = ProxyNode.query.first().id
+    r = client.post(f"/api/admin/nodes/{nid}/toggle")
+    assert r.get_json()["enable"] is False
+    r = client.delete(f"/api/admin/nodes/{nid}")
+    assert r.get_json()["status"] == "success"
+    with app.app_context():
+        assert ProxyNode.query.get(nid) is None
+
+
+def test_admin_add_delete_goods(app, client):
+    _login(client, "admin", "admin123")
+    r = client.post("/api/admin/goods", json={"name": "测试包", "transfer_gb": 5, "money": 2, "days": 7})
+    assert r.get_json()["status"] == "success"
+    gid = r.get_json()["goods"]["id"]
+    r = client.delete(f"/api/admin/goods/{gid}")
+    assert r.get_json()["status"] == "success"
+
+
+def test_admin_user_toggle_reset(app, client):
+    _login(client, "admin", "admin123")
+    with app.app_context():
+        demo = User.query.filter_by(username="demo").first()
+        demo.upload_traffic = 5 * GB
+        db.session.commit()
+        uid = demo.id
+    r = client.post(f"/api/admin/users/{uid}/toggle")
+    assert r.get_json()["enable"] is False
+    r = client.post(f"/api/admin/users/{uid}/reset_traffic")
+    assert r.get_json()["status"] == "success"
+    with app.app_context():
+        demo = User.query.get(uid)
+        assert demo.upload_traffic == 0
+        assert demo.enable is True
+
+
+def test_admin_crud_requires_admin(app, client):
+    _login(client, "demo", "demo123")
+    assert client.post("/api/admin/nodes", json={}).status_code == 403
+    assert client.delete("/api/admin/nodes/1").status_code == 403
+    assert client.post("/api/admin/users/1/toggle").status_code == 403
+
+
+def test_system_status_has_revenue_and_online(app, client):
+    _login(client, "admin", "admin123")
+    r = client.get("/api/system_status")
+    d = r.get_json()
+    assert "revenue" in d
+    assert "online_nodes" in d
+    assert "online" in d["nodes"][0]
+
+
+def test_node_heartbeat_marks_online(app, client):
+    with app.app_context():
+        node = ProxyNode.query.first()
+        assert node.is_online() is False  # no heartbeat yet
+    client.post("/api/proxy_configs/1", json={"data": []}, headers={"X-API-Token": "test-token"})
+    with app.app_context():
+        node = ProxyNode.query.first()
+        assert node.is_online() is True
 
 
 if __name__ == "__main__":

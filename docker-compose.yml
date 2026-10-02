@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  fluxgate:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - SECRET_KEY=change-me
+      - HOST=http://localhost:5000
+    volumes:
+      - ./fluxgate.db:/app/fluxgate/fluxgate.db
+    restart: unless-stopped

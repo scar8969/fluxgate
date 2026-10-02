@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -53,11 +53,11 @@ h1 { font-size:22px; margin-bottom:4px; } h2 { font-size:18px; margin-bottom:14p
 <nav class="nav">
   <div class="brand">⚡ {{ config.TITLE }}</div>
   {% if session.get('user_id') %}
-  <a href="{{ url_for('web.dashboard') }}">仪表盘</a>
-  <a href="{{ url_for('web.shop') }}">商品中心</a>
-  {% if user and user.is_admin %}<a href="{{ url_for('web.admin') }}">管理后台</a>{% endif %}
+  <a href="{{ url_for('web.dashboard') }}">Dashboard</a>
+  <a href="{{ url_for('web.shop') }}">Shop</a>
+  {% if user and user.is_admin %}<a href="{{ url_for('web.admin') }}">Admin</a>{% endif %}
   <div class="spacer"></div>
-  <div class="user-chip">{{ user.username if user else '' }} · <a href="{{ url_for('web.logout') }}">退出</a></div>
+  <div class="user-chip">{{ user.username if user else '' }} · <a href="{{ url_for('web.logout') }}">Logout</a></div>
   {% endif %}
 </nav>
 <div class="container">

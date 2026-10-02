@@ -1,22 +1,22 @@
 {% extends 'base.html' %}
 {% block content %}
 <div class="card" style="max-width:420px;margin:40px auto;">
-  <h1>注册</h1>
-  <p class="sub">邀请注册制，告别不良用户</p>
+  <h1>Register</h1>
+  <p class="sub">Invite-code registration keeps bad actors out</p>
   <form method="post">
-    <label>用户名</label>
+    <label>Username</label>
     <input name="username" required autofocus>
-    <label>邮箱</label>
+    <label>Email</label>
     <input name="email" type="email">
-    <label>密码</label>
+    <label>Password</label>
     <input name="password" type="password" required>
-    <label>邀请码（可选）</label>
-    <input name="invitecode" placeholder="填写邀请码可获得流量奖励">
+    <label>Invite code (optional)</label>
+    <input name="invitecode" placeholder="Enter an invite code for a bonus">
     {% if ref %}<input type="hidden" name="ref" value="{{ ref }}">{% endif %}
-    <button class="btn" style="width:100%">注册</button>
+    <button class="btn" style="width:100%">Register</button>
   </form>
   <p style="margin-top:14px;font-size:13px;color:var(--muted);text-align:center">
-    已有账号？<a href="{{ url_for('web.login') }}">登录</a>
+    Already have an account? <a href="{{ url_for('web.login') }}">Sign in</a>
   </p>
 </div>
 {% endblock %}

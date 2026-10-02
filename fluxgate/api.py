@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 
 from flask import Blueprint, current_app, jsonify, request, session
 
-from . import db
+from . import db, GB
 from .models import Goods, InviteCode, User, UserCheckInLog, UserOrder, UserRefLog
 from .proxy import ProxyNode, UserTrafficLog
 from .sub import generate_clash_config, generate_subscription
@@ -64,7 +64,8 @@ def proxy_configs(node_id):
         return jsonify({"error": "not found"}), 404
     if request.method == "GET":
         return jsonify(node.get_proxy_configs())
-    # POST: traffic report from backend
+    # POST: traffic report from backend — also acts as heartbeat
+    node.last_seen = datetime.utcnow()
     data = request.get_json(force=True, silent=True) or {}
     for item in data.get("data", []):
         uid = item.get("user_id")
@@ -94,8 +95,8 @@ def user_settings():
     if pw:
         user.ss_password = pw
         db.session.commit()
-        return jsonify({"status": "success", "title": "修改成功!", "subtitle": "请及时更换客户端配置!"})
-    return jsonify({"status": "error", "title": "修改失败!", "subtitle": "配置更新失败!"})
+        return jsonify({"status": "success", "title": "Updated!", "subtitle": "Reconfigure your client with the new password."})
+    return jsonify({"status": "error", "title": "Update failed!", "subtitle": "No new password provided."})
 
 
 @bp.route("/user/stats/traffic_chart")
@@ -144,11 +145,11 @@ def checkin():
         return jsonify({"error": "login required"}), 401
     reward = UserCheckInLog.checkin(user)
     if reward is None:
-        return jsonify({"status": "error", "title": "今日已签到!", "subtitle": "明天再来吧~"})
+        return jsonify({"status": "error", "title": "Already checked in today!", "subtitle": "Come back tomorrow."})
     return jsonify({
         "status": "success",
-        "title": "签到成功!",
-        "subtitle": f"获得 {reward // (1024*1024)} MB 流量",
+        "title": "Checked in!",
+        "subtitle": f"Earned {reward // (1024*1024)} MB of traffic",
     })
 
 
@@ -207,11 +208,128 @@ def system_status():
     total_orders = UserOrder.query.count()
     paid_orders = UserOrder.query.filter(UserOrder.status == UserOrder.STATUS_FINISHED).count()
     total_traffic = ProxyNode.calc_total_traffic()
+    revenue = db.session.query(db.func.sum(UserOrder.amount)).filter(
+        UserOrder.status == UserOrder.STATUS_FINISHED).scalar() or 0.0
+    online_nodes = sum(1 for n in ProxyNode.query.all() if n.is_online())
     return jsonify({
         "total_users": total_users,
         "today_users": today_users,
         "total_orders": total_orders,
         "paid_orders": paid_orders,
         "total_traffic": total_traffic,
+        "revenue": round(revenue, 2),
+        "online_nodes": online_nodes,
         "nodes": [n.to_dict() for n in ProxyNode.query.all()],
     })
+
+
+# ---------- admin CRUD ----------
+
+def _admin_required():
+    user = _current_user()
+    if not user or not user.is_admin:
+        return None
+    return user
+
+
+@bp.route("/admin/nodes", methods=["POST"])
+def admin_add_node():
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    data = request.get_json(force=True, silent=True) or request.form
+    node = ProxyNode(
+        name=data.get("name", ""),
+        server=data.get("server", ""),
+        node_type=data.get("node_type", "ss"),
+        ss_method=data.get("ss_method", "aes-256-gcm"),
+        ss_port=int(data.get("ss_port", 8388)),
+        country=data.get("country", "CN"),
+        level=int(data.get("level", 0)),
+        uuid=data.get("uuid", ""),
+        trojan_password=data.get("trojan_password", ""),
+        total_traffic=int(float(data.get("total_traffic_gb", 1000)) * GB),
+        sequence=int(data.get("sequence", 0)),
+    )
+    db.session.add(node)
+    db.session.commit()
+    return jsonify({"status": "success", "node": node.to_dict()})
+
+
+@bp.route("/admin/nodes/<int:node_id>", methods=["DELETE"])
+def admin_delete_node(node_id):
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    node = ProxyNode.query.get(node_id)
+    if not node:
+        return jsonify({"error": "not found"}), 404
+    db.session.delete(node)
+    db.session.commit()
+    return jsonify({"status": "success"})
+
+
+@bp.route("/admin/nodes/<int:node_id>/toggle", methods=["POST"])
+def admin_toggle_node(node_id):
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    node = ProxyNode.query.get(node_id)
+    if not node:
+        return jsonify({"error": "not found"}), 404
+    node.enable = not node.enable
+    db.session.commit()
+    return jsonify({"status": "success", "enable": node.enable})
+
+
+@bp.route("/admin/goods", methods=["POST"])
+def admin_add_goods():
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    data = request.get_json(force=True, silent=True) or request.form
+    goods = Goods(
+        name=data.get("name", "待编辑"),
+        content=data.get("content", ""),
+        transfer=int(float(data.get("transfer_gb", 10)) * GB),
+        money=float(data.get("money", 0)),
+        level=int(data.get("level", 0)),
+        days=int(data.get("days", 30)),
+        order=int(data.get("order", 99)),
+    )
+    db.session.add(goods)
+    db.session.commit()
+    return jsonify({"status": "success", "goods": goods.to_dict()})
+
+
+@bp.route("/admin/goods/<int:goods_id>", methods=["DELETE"])
+def admin_delete_goods(goods_id):
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    goods = Goods.query.get(goods_id)
+    if not goods:
+        return jsonify({"error": "not found"}), 404
+    db.session.delete(goods)
+    db.session.commit()
+    return jsonify({"status": "success"})
+
+
+@bp.route("/admin/users/<int:user_id>/toggle", methods=["POST"])
+def admin_toggle_user(user_id):
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "not found"}), 404
+    user.enable = not user.enable
+    db.session.commit()
+    return jsonify({"status": "success", "enable": user.enable})
+
+
+@bp.route("/admin/users/<int:user_id>/reset_traffic", methods=["POST"])
+def admin_reset_traffic(user_id):
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "not found"}), 404
+    user.reset_traffic(user.total_traffic)
+    user.enable = True
+    db.session.commit()
+    return jsonify({"status": "success"})

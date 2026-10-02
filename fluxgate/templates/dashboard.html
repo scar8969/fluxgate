@@ -1,77 +1,103 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1>仪表盘</h1>
-<p class="sub">欢迎回来，{{ user.username }} · 等级 {{ user.level }}</p>
+<h1>Dashboard</h1>
+<p class="sub">Welcome back, {{ user.username }} · Level {{ user.level }}</p>
 
 <div class="grid">
-  <div class="stat"><div class="label">剩余流量</div><div class="value green">{{ user.human_remain_traffic }}</div></div>
-  <div class="stat"><div class="label">已用流量</div><div class="value">{{ user.human_used_traffic }}</div></div>
-  <div class="stat"><div class="label">总流量</div><div class="value">{{ user.human_total_traffic }}</div></div>
-  <div class="stat"><div class="label">余额</div><div class="value">¥{{ '%.2f'|format(user.balance or 0) }}</div></div>
+  <div class="stat"><div class="label">Remaining</div><div class="value green">{{ user.human_remain_traffic }}</div></div>
+  <div class="stat"><div class="label">Used</div><div class="value">{{ user.human_used_traffic }}</div></div>
+  <div class="stat"><div class="label">Total</div><div class="value">{{ user.human_total_traffic }}</div></div>
+  <div class="stat"><div class="label">Balance</div><div class="value">¥{{ '%.2f'|format(user.balance or 0) }}</div></div>
 </div>
 
 <div class="card">
-  <h2>流量使用</h2>
+  <h2>Traffic usage</h2>
   <div class="progress">
     <div class="bar {% if user.used_percentage > 90 %}danger{% elif user.used_percentage > 70 %}warn{% endif %}" style="width:{{ user.used_percentage }}%"></div>
   </div>
-  <p style="color:var(--muted);font-size:13px;margin-top:8px">已使用 {{ user.used_percentage }}% · 端口 {{ user.ss_port }}</p>
+  <p style="color:var(--muted);font-size:13px;margin-top:8px">{{ user.used_percentage }}% used · Port {{ user.ss_port }}</p>
+  <canvas id="trafficChart" height="120" style="margin-top:14px;width:100%"></canvas>
 </div>
 
 <div class="card">
   <div class="row" style="justify-content:space-between">
-    <h2 style="margin:0">订阅链接</h2>
-    <button class="btn green" onclick="checkin()">每日签到</button>
+    <h2 style="margin:0">Subscription</h2>
+    <button class="btn green" onclick="checkin()">Daily check-in</button>
   </div>
-  <p class="sub">复制订阅地址到客户端，支持 ss / v2ray / trojan / clash</p>
+  <p class="sub">Copy this URL into any client — supports ss / v2ray / trojan / clash</p>
   <div class="codebox" id="sublink">{{ user.sub_link }}</div>
   <div class="row" style="margin-top:12px">
-    <a class="btn ghost" href="{{ user.sub_link }}" target="_blank">ss 订阅</a>
-    <a class="btn ghost" href="{{ user.sub_link }}&sub_type=v2ray" target="_blank">v2ray 订阅</a>
-    <a class="btn ghost" href="{{ user.sub_link }}&sub_type=trojan" target="_blank">trojan 订阅</a>
-    <a class="btn ghost" href="{{ user.sub_link }}&sub_type=clash" target="_blank">clash 订阅</a>
+    <a class="btn ghost" href="{{ user.sub_link }}" target="_blank">ss subscription</a>
+    <a class="btn ghost" href="{{ user.sub_link }}&sub_type=v2ray" target="_blank">v2ray subscription</a>
+    <a class="btn ghost" href="{{ user.sub_link }}&sub_type=trojan" target="_blank">trojan subscription</a>
+    <a class="btn ghost" href="{{ user.sub_link }}&sub_type=clash" target="_blank">clash subscription</a>
   </div>
 </div>
 
 <div class="card">
-  <h2>我的节点</h2>
+  <h2>My nodes</h2>
   {% if nodes %}
   <table>
-    <tr><th>名称</th><th>类型</th><th>地址</th><th>端口</th><th>倍率</th></tr>
+    <tr><th>Name</th><th>Type</th><th>Address</th><th>Port</th><th>Status</th><th>Rate</th></tr>
     {% for n in nodes %}
     <tr>
       <td>{{ n.name }}</td>
       <td><span class="badge">{{ n.node_type }}</span></td>
       <td class="mono">{{ n.server }}</td>
       <td class="mono">{{ n.ss_port }}</td>
+      <td>{% if n.is_online() %}<span class="badge green">Online</span>{% else %}<span class="badge red">Offline</span>{% endif %}</td>
       <td>{{ n.enlarge_scale }}x</td>
     </tr>
     {% endfor %}
   </table>
   {% else %}
-  <p style="color:var(--muted)">当前等级暂无可用节点</p>
+  <p style="color:var(--muted)">No nodes available at your level</p>
   {% endif %}
 </div>
 
 <div class="card">
-  <h2>邀请返利</h2>
-  <p class="sub">邀请好友注册，获得流量奖励</p>
+  <h2>Referral program</h2>
+  <p class="sub">Invite friends and earn traffic rewards</p>
   <div class="codebox">{{ user.ref_link }}</div>
   <div class="row" style="margin-top:12px">
-    <button class="btn ghost" onclick="copyText('{{ user.ref_link }}')">复制邀请链接</button>
-    <button class="btn ghost" onclick="genInvite()">生成邀请码</button>
+    <button class="btn ghost" onclick="copyText('{{ user.ref_link }}')">Copy invite link</button>
+    <button class="btn ghost" onclick="genInvite()">Generate invite code</button>
   </div>
 </div>
 
 <script>
-function copyText(t){ navigator.clipboard.writeText(t).then(()=>alert('已复制')); }
+function copyText(t){ navigator.clipboard.writeText(t).then(()=>alert('Copied!')); }
 function checkin(){
   fetch('/api/checkin',{method:'POST'}).then(r=>r.json()).then(d=>{ alert(d.title+' '+d.subtitle); location.reload(); });
 }
 function genInvite(){
   fetch('/api/gen/invitecode',{method:'POST',body:new URLSearchParams({num:1})}).then(r=>r.json()).then(d=>{
-    if(d.codes) alert('邀请码: '+d.codes[0]); else alert(d.title||'生成失败');
+    if(d.codes) alert('Invite code: '+d.codes[0]); else alert(d.title||'Failed');
   });
 }
+// live traffic chart (7-day upload/download)
+fetch('/api/user/stats/traffic_chart').then(r=>r.json()).then(d=>{
+  const cv = document.getElementById('trafficChart');
+  if(!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width = cv.offsetWidth || 800, H = cv.height = 140;
+  const max = Math.max(1, ...d.upload, ...d.download);
+  const pad = 24;
+  const x = i => pad + i * (W - pad*2) / Math.max(1, d.labels.length - 1);
+  const y = v => H - pad - (v / max) * (H - pad*2);
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle = '#232733'; ctx.fillStyle = '#8b93a3'; ctx.font = '10px sans-serif';
+  for(let i=0;i<d.labels.length;i++){
+    ctx.beginPath(); ctx.moveTo(x(i), pad); ctx.lineTo(x(i), H-pad); ctx.stroke();
+    ctx.fillText(d.labels[i].slice(5), x(i)-14, H-8);
+  }
+  const line = (arr, color) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    arr.forEach((v,i)=> i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v)));
+    ctx.stroke();
+  };
+  line(d.upload, '#4f8cff');
+  line(d.download, '#3ddc84');
+});
 </script>
 {% endblock %}
