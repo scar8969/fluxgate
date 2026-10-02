@@ -18,6 +18,8 @@ import json
 from flask import Blueprint, current_app, jsonify, render_template, request, session
 
 from . import db, GB
+
+VERSION = "0.6.0"
 from .models import Goods, InviteCode, User, UserCheckInLog, UserOrder, UserRefLog
 from .proxy import ProxyNode, UserTrafficLog
 from .sub import generate_clash_config, generate_subscription
@@ -312,6 +314,21 @@ def gen_invitecode():
     user.invitecode_num -= num
     db.session.commit()
     return jsonify({"status": "success", "codes": [c.code for c in codes]})
+
+
+@bp.route("/health")
+def health():
+    """Liveness probe: DB up + version."""
+    try:
+        db.session.execute(db.text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        db_ok = False
+    return jsonify({
+        "status": "ok" if db_ok else "degraded",
+        "version": VERSION,
+        "db": "up" if db_ok else "down",
+    })
 
 
 @bp.route("/metrics")

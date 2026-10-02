@@ -643,5 +643,65 @@ def test_node_uptime(app, client):
         assert node.last_seen is not None
 
 
+# ---------- landing + health ----------
+
+def test_landing_page(app, client):
+    r = client.get("/")
+    assert r.status_code == 200
+    html = r.get_data(as_text=True)
+    assert "Self-hosted proxy panel" in html
+    assert "Get started" in html
+    assert "Simple pricing" in html
+
+
+def test_landing_redirects_logged_in(app, client):
+    _login(client)
+    r = client.get("/")
+    assert r.status_code == 302
+    assert "/dashboard" in r.headers["Location"]
+
+
+def test_health_endpoint(app, client):
+    r = client.get("/api/health")
+    assert r.status_code == 200
+    d = r.get_json()
+    assert d["status"] == "ok"
+    assert d["db"] == "up"
+    assert d["version"] == "0.6.0"
+
+
+def test_uptime_formats(app):
+    from datetime import datetime, timedelta
+    with app.app_context():
+        node = ProxyNode.query.first()
+        node.first_seen = datetime.utcnow() - timedelta(days=3, hours=4)
+        assert node.uptime() == "3d 4h"
+        node.first_seen = datetime.utcnow() - timedelta(hours=5, minutes=30)
+        assert node.uptime() == "5h 30m"
+        node.first_seen = datetime.utcnow() - timedelta(minutes=45)
+        assert node.uptime() == "45m"
+
+
+def test_traffic_format_units():
+    from fluxgate.models import traffic_format
+    assert traffic_format(500) == "500.00 B"
+    assert traffic_format(2048) == "2.00 KB"
+    assert traffic_format(5 * 1024 * 1024) == "5.00 MB"
+    assert traffic_format(3 * 1024 ** 3) == "3.00 GB"
+    assert traffic_format(2 * 1024 ** 4) == "2.00 TB"
+
+
+def test_subscribe_invalid_api_key(app, client):
+    r = client.get("/api/subscribe?api_key=nonexistent")
+    assert r.status_code == 404
+
+
+def test_change_password_short(app, client):
+    _login(client)
+    r = client.post("/api/user/password", json={"current_password": "demo123", "new_password": "abc"})
+    assert r.status_code == 400
+    assert "too short" in r.get_json()["title"].lower()
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

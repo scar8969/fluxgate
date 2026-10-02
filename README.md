@@ -4,7 +4,7 @@
 
 > Self-hosted proxy management panel — users, nodes, subscriptions, and billing in one process.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-49%2F49-passing-brightgreen) ![coverage](https://img.shields.io/badge/coverage-86%25-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml) [![Docker](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml) [![CodeQL](https://github.com/scar8969/fluxgate/actions/workflows/codeql.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/codeql.yml)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-56%2F56-passing-brightgreen) ![coverage](https://img.shields.io/badge/coverage-88%25-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml) [![Docker](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/docker.yml) [![CodeQL](https://github.com/scar8969/fluxgate/actions/workflows/codeql.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/codeql.yml) [![Stargazers](https://img.shields.io/github/stars/scar8969/fluxgate)](https://github.com/scar8969/fluxgate/stargazers)
 
 **FluxGate** is a self-hosted management panel for proxy services. Users register with invite codes, buy traffic packages, and get subscription links for any client. Admins manage nodes, goods, and orders from a built-in dashboard. Everything runs in a single Python process — no Redis, no Celery, no external services.
 
@@ -155,6 +155,7 @@ One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gu
 | GET | `/api/subscribe?api_key=<key>&sub_type=ss` | subscription links via API key |
 | GET | `/api/subscribe/qr?token=<id>&sub_type=ss` | QR code PNG of subscription URL |
 | GET | `/api/metrics` | Prometheus metrics |
+| GET | `/api/health` | liveness probe (status + version + db) |
 | GET | `/api/stream` | live SSE stream (traffic + node status, login) |
 | GET | `/api/docs` | API documentation page |
 | GET | `/api/proxy_configs/<node_id>` | node config for backends (X-API-Token auth) |
@@ -185,6 +186,7 @@ One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gu
 
 ## Screenshots
 
+![Landing](screenshots/landing.png)
 ![Dashboard](screenshots/dashboard.png)
 ![Shop](screenshots/shop.png)
 ![Admin](screenshots/admin.png)
@@ -231,6 +233,7 @@ Measured with `bench.py` against a local instance (500 requests, 20 concurrent, 
 - [x] Grafana + Prometheus stack
 - [x] Auto-release workflow
 - [x] CodeQL + Dependabot
+- [x] Landing page + health endpoint
 - [x] Docker + CI
 - [ ] Real Alipay integration
 - [ ] Multi-language i18n
@@ -242,7 +245,7 @@ Measured with `bench.py` against a local instance (500 requests, 20 concurrent, 
 .venv/Scripts/python -m pytest tests/ -v
 ```
 
-49 tests covering: seed data, invite-code registration, login/logout, daily check-in, traffic overflow auto-disable, subscription generation (ss/v2ray/clash), level gating, order lifecycle, payment callback, API auth, admin-only routes, admin CRUD, node heartbeat + uptime, admin analytics, CSV exports, login rate limiting, QR codes, Prometheus metrics, webhooks, API docs, SSE stream, Telegram bot commands, payment providers, Telegram notifications, API keys, password change, page rendering.
+56 tests covering: seed data, invite-code registration, login/logout, daily check-in, traffic overflow auto-disable, subscription generation (ss/v2ray/clash), level gating, order lifecycle, payment callback, API auth, admin-only routes, admin CRUD, node heartbeat + uptime, admin analytics, CSV exports, login rate limiting, QR codes, Prometheus metrics, webhooks, API docs, SSE stream, Telegram bot commands, payment providers, Telegram notifications, API keys, password change, landing page, health endpoint, page rendering.
 
 ## License
 

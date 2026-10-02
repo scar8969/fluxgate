@@ -5,6 +5,13 @@ All notable changes to FluxGate.
 ## [Unreleased]
 
 ### Added
+- Landing page at `/` (hero, features, pricing preview)
+- `/api/health` liveness probe + VERSION constant
+- Stargazers badge, landing screenshot
+
+## [0.5.0] - 2026-10-02
+
+### Added
 - USD currency (was ¥)
 - Grafana dashboard JSON + Prometheus/Grafana docker-compose stack
 - Per-user API keys (subscribe via api_key)

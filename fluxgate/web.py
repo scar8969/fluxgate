@@ -37,7 +37,7 @@ def index():
     user = _current_user()
     if user:
         return redirect(url_for("web.dashboard"))
-    return redirect(url_for("web.login"))
+    return render_template("landing.html")
 
 
 @bp.route("/register", methods=["GET", "POST"])

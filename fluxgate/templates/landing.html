@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block content %}
+<style>
+.hero { text-align:center; padding:60px 20px 40px; }
+.hero h1 { font-size:44px; margin-bottom:12px; }
+.hero .tagline { color:var(--muted); font-size:18px; max-width:640px; margin:0 auto 28px; }
+.hero .cta { display:flex; gap:14px; justify-content:center; }
+.hero .badge-row { margin-top:24px; display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+.feature-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin:40px 0; }
+.feature { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px; }
+.feature .icon { font-size:28px; margin-bottom:10px; }
+.feature h3 { font-size:16px; margin-bottom:6px; }
+.feature p { color:var(--muted); font-size:13px; line-height:1.5; }
+.pricing { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin:40px 0; }
+.plan { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:22px; text-align:center; }
+.plan .price { font-size:32px; font-weight:700; color:var(--green); margin:10px 0; }
+.plan .desc { color:var(--muted); font-size:13px; margin-bottom:16px; }
+.plan.featured { border-color:var(--accent); }
+.footer { text-align:center; color:var(--muted); font-size:13px; padding:30px 0 10px; border-top:1px solid var(--border); margin-top:40px; }
+</style>
+
+<div class="hero">
+  <h1>Self-hosted proxy panel.<br>One process. Zero bloat.</h1>
+  <p class="tagline">FluxGate manages users, nodes, subscriptions, and billing for ss / v2ray / trojan / clash — in a single Python process. No Redis. No Celery. No VPS required.</p>
+  <div class="cta">
+    <a class="btn" href="{{ url_for('web.register') }}">Get started</a>
+    <a class="btn ghost" href="{{ url_for('web.login') }}">Sign in</a>
+  </div>
+  <div class="badge-row">
+    <span class="badge green">49 tests</span>
+    <span class="badge green">86% coverage</span>
+    <span class="badge">GPL-3.0</span>
+    <span class="badge">Docker ready</span>
+    <span class="badge">GHCR image</span>
+  </div>
+</div>
+
+<div class="feature-grid">
+  <div class="feature"><div class="icon">🔗</div><h3>Multi-protocol</h3><p>ss, v2ray, trojan, and full Clash YAML with proxy-groups — one subscription URL for any client.</p></div>
+  <div class="feature"><div class="icon">📱</div><h3>QR codes</h3><p>Scan-to-import subscription links from the dashboard.</p></div>
+  <div class="feature"><div class="icon">📊</div><h3>Live charts</h3><p>7-day traffic curves + SSE real-time node status.</p></div>
+  <div class="feature"><div class="icon">🤖</div><h3>Telegram bot</h3><p>Check traffic, check in, and get subscriptions from chat.</p></div>
+  <div class="feature"><div class="icon">📡</div><h3>Observable</h3><p>Prometheus metrics + Grafana dashboard included.</p></div>
+  <div class="feature"><div class="icon">👑</div><h3>Admin CRUD</h3><p>Users, nodes, goods, revenue analytics, CSV exports.</p></div>
+</div>
+
+<h2 style="text-align:center">Simple pricing</h2>
+<div class="pricing">
+  <div class="plan"><h3>Trial</h3><div class="price">$1</div><div class="desc">10GB · 7 days</div><a class="btn ghost" href="{{ url_for('web.register') }}">Start</a></div>
+  <div class="plan featured"><h3>Basic</h3><div class="price">$5</div><div class="desc">100GB · 30 days</div><a class="btn" href="{{ url_for('web.register') }}">Popular</a></div>
+  <div class="plan"><h3>Pro</h3><div class="price">$20</div><div class="desc">500GB · 90 days</div><a class="btn ghost" href="{{ url_for('web.register') }}">Start</a></div>
+  <div class="plan"><h3>Ultimate</h3><div class="price">$60</div><div class="desc">1TB · 365 days</div><a class="btn ghost" href="{{ url_for('web.register') }}">Start</a></div>
+</div>
+
+<div class="footer">FluxGate · GPL-3.0 · <a href="/api/docs">API docs</a></div>
+{% endblock %}
