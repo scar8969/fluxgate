@@ -1,5 +1,5 @@
-"""Web UI — register/login/dashboard/shop/admin. Mirrors the original's
-Django templates but as a single-page dark dashboard."""
+"""Web UI — register/login/dashboard/shop/admin. Served as a single-page
+dark dashboard."""
 from datetime import datetime
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, session, url_for
