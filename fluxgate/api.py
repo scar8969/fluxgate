@@ -189,7 +189,7 @@ def gen_invitecode():
     if not user:
         return jsonify({"error": "login required"}), 401
     if user.invitecode_num <= 0:
-        return jsonify({"status": "error", "title": "邀请码数量不足!"})
+        return jsonify({"status": "error", "title": "No invite codes left!"})
     num = min(int(request.form.get("num", 1)), user.invitecode_num)
     codes = InviteCode.gen_codes(user.id, num)
     user.invitecode_num -= num
@@ -285,7 +285,7 @@ def admin_add_goods():
         return jsonify({"error": "admin required"}), 403
     data = request.get_json(force=True, silent=True) or request.form
     goods = Goods(
-        name=data.get("name", "待编辑"),
+        name=data.get("name", "New plan"),
         content=data.get("content", ""),
         transfer=int(float(data.get("transfer_gb", 10)) * GB),
         money=float(data.get("money", 0)),

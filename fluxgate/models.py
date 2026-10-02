@@ -241,8 +241,8 @@ class Goods(db.Model):
     STATUS_OFF = -1
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(128), default="待编辑")
-    content = db.Column(db.String(256), default="待编辑")
+    name = db.Column(db.String(128), default="New plan")
+    content = db.Column(db.String(256), default="")
     transfer = db.Column(db.BigInteger, default=GB)  # added traffic (bytes)
     money = db.Column(db.Float, default=0.0)
     level = db.Column(db.Integer, default=0)
