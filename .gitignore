@@ -3,3 +3,4 @@ fluxgate.db
 __pycache__/
 *.pyc
 server.log
+tg_links.json
