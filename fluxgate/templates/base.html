@@ -55,6 +55,7 @@ h1 { font-size:22px; margin-bottom:4px; } h2 { font-size:18px; margin-bottom:14p
   {% if session.get('user_id') %}
   <a href="{{ url_for('web.dashboard') }}">Dashboard</a>
   <a href="{{ url_for('web.shop') }}">Shop</a>
+  <a href="/api/docs">API Docs</a>
   {% if user and user.is_admin %}<a href="{{ url_for('web.admin') }}">Admin</a>{% endif %}
   <div class="spacer"></div>
   <div class="user-chip">{{ user.username if user else '' }} · <a href="{{ url_for('web.logout') }}">Logout</a></div>

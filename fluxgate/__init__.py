@@ -29,6 +29,7 @@ def create_app(config=None):
     app.config["DEFAULT_TRAFFIC"] = int(os.environ.get("DEFAULT_TRAFFIC", 10 * GB))
     app.config["INVITE_NUM"] = int(os.environ.get("INVITE_NUM", 5))
     app.config["TITLE"] = os.environ.get("TITLE", "FluxGate")
+    app.config["WEBHOOK_URL"] = os.environ.get("WEBHOOK_URL", "")  # optional paid-order webhook
     if config:
         app.config.update(config)
 

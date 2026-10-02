@@ -367,5 +367,77 @@ def test_login_rate_limit_resets_after_window(app, client):
         assert _rate_limited("127.0.0.1") is False  # expired, allowed again
 
 
+# ---------- QR / metrics / webhook / docs ----------
+
+def test_subscribe_qr(app, client):
+    with app.app_context():
+        user = User.query.filter_by(username="demo").first()
+        r = client.get(f"/api/subscribe/qr?token={user.id}&sub_type=ss")
+        assert r.status_code == 200
+        assert r.mimetype == "image/png"
+        assert r.data[:8] == b"\x89PNG\r\n\x1a\n"  # PNG magic
+
+
+def test_subscribe_qr_invalid_token(app, client):
+    assert client.get("/api/subscribe/qr?token=999999").status_code == 404
+
+
+def test_metrics_endpoint(app, client):
+    r = client.get("/api/metrics")
+    assert r.status_code == 200
+    txt = r.get_data(as_text=True)
+    assert "fluxgate_users_total" in txt
+    assert "fluxgate_revenue_total" in txt
+    assert "fluxgate_nodes_online" in txt
+    assert "fluxgate_traffic_bytes_total" in txt
+
+
+def test_webhook_fires_on_paid(app):
+    """WEBHOOK_URL set -> order.paid POSTed (fire-and-forget)."""
+    import threading
+    import json as _json
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    received = {}
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            length = int(self.headers["Content-Length"])
+            received["body"] = _json.loads(self.rfile.read(length))
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    srv = HTTPServer(("127.0.0.1", 0), Handler)
+    port = srv.server_address[1]
+    t = threading.Thread(target=srv.serve_forever, daemon=True)
+    t.start()
+    try:
+        app.config["WEBHOOK_URL"] = f"http://127.0.0.1:{port}/hook"
+        with app.test_client() as c:
+            c.post("/login", data={"username": "demo", "password": "demo123"})
+            r = c.post("/api/orders", json={"goods_id": 1})
+            out_trade_no = r.get_json()["order"]["out_trade_no"]
+            c.post("/api/callback/alipay", json={"out_trade_no": out_trade_no})
+        import time
+        for _ in range(20):
+            if received.get("body"):
+                break
+            time.sleep(0.1)
+        check_webhook = received.get("body")
+        assert check_webhook and check_webhook["event"] == "order.paid"
+        assert check_webhook["out_trade_no"] == out_trade_no
+    finally:
+        srv.shutdown()
+
+
+def test_docs_page(app, client):
+    _login(client)
+    r = client.get("/api/docs")
+    assert r.status_code == 200
+    assert "API Documentation" in r.get_data(as_text=True)
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

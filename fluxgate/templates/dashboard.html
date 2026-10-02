@@ -27,11 +27,15 @@
   <p class="sub">Copy this URL into any client — supports ss / v2ray / trojan / clash</p>
   <div class="codebox" id="sublink">{{ user.sub_link }}</div>
   <div class="row" style="margin-top:12px">
-    <a class="btn ghost" href="{{ user.sub_link }}" target="_blank">ss subscription</a>
-    <a class="btn ghost" href="{{ user.sub_link }}&sub_type=v2ray" target="_blank">v2ray subscription</a>
-    <a class="btn ghost" href="{{ user.sub_link }}&sub_type=trojan" target="_blank">trojan subscription</a>
-    <a class="btn ghost" href="{{ user.sub_link }}&sub_type=clash" target="_blank">clash subscription</a>
+    <img id="subQr" src="/api/subscribe/qr?token={{ user.id }}&sub_type=ss" width="140" height="140" alt="Subscription QR" style="border-radius:8px;border:1px solid var(--border)">
+    <div class="row" style="flex-direction:column;align-items:flex-start">
+      <a class="btn ghost" href="{{ user.sub_link }}" target="_blank">ss subscription</a>
+      <a class="btn ghost" href="{{ user.sub_link }}&sub_type=v2ray" target="_blank">v2ray subscription</a>
+      <a class="btn ghost" href="{{ user.sub_link }}&sub_type=trojan" target="_blank">trojan subscription</a>
+      <a class="btn ghost" href="{{ user.sub_link }}&sub_type=clash" target="_blank">clash subscription</a>
+    </div>
   </div>
+  <p style="color:var(--muted);font-size:12px;margin-top:8px">Scan with your client to import the ss subscription.</p>
 </div>
 
 <div class="card">

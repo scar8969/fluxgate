@@ -2,7 +2,7 @@
 
 > Self-hosted proxy management panel — users, nodes, subscriptions, and billing in one process.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-33%2F33-passing-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Flask](https://img.shields.io/badge/Flask-3.1-black) ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-3.1-green) ![tests](https://img.shields.io/badge/tests-38%2F38-passing-brightgreen) ![license](https://img.shields.io/badge/license-GPL--3.0-blue) ![docker](https://img.shields.io/badge/docker-ready-2496ed) [![CI](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml/badge.svg)](https://github.com/scar8969/fluxgate/actions/workflows/ci.yml) ![coverage](https://img.shields.io/badge/coverage-~90%25-brightgreen)
 
 **FluxGate** is a self-hosted management panel for proxy services. Users register with invite codes, buy traffic packages, and get subscription links for any client. Admins manage nodes, goods, and orders from a built-in dashboard. Everything runs in a single Python process — no Redis, no Celery, no external services.
 
@@ -20,6 +20,7 @@ Proxy panels are either abandoned, bloated, or locked behind paid SaaS. FluxGate
 - 🔑 **Invite-code registration** — no spam users, referral rewards for inviters
 - 📦 **Goods & billing** — traffic packages with level gating, order lifecycle, payment callback
 - 🔗 **Subscription engine** — `ss://`, `vmess://`, `vless://`, `trojan://`, and full Clash YAML with proxy-groups
+- 📱 **QR codes** — scan-to-import subscription links
 - 📊 **Traffic accounting** — per-user per-node logs, auto-disable on quota overflow
 - 📈 **Live charts** — 7-day upload/download traffic curves on the dashboard
 - 🟢 **Node health** — backend heartbeat → online/offline status
@@ -28,6 +29,9 @@ Proxy panels are either abandoned, bloated, or locked behind paid SaaS. FluxGate
 - 🎁 **Daily check-in** — random traffic reward, once per day
 - 🛡️ **Backend API** — token-authenticated node config + traffic reporting
 - 🚦 **Login rate limiting** — brute-force protection
+- 📡 **Prometheus metrics** — `/api/metrics` for monitoring
+- 🔔 **Webhooks** — `order.paid` events on completed payments
+- 📚 **API docs** — built-in `/api/docs` page
 - 👑 **Admin dashboard** — CRUD for users/nodes/goods, revenue stats
 
 ## Architecture
@@ -115,6 +119,9 @@ One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gu
 | Method | Path | Description |
 |---|---|---|
 | GET | `/api/subscribe?token=<id>&sub_type=ss` | subscription links (ss/v2ray/trojan/clash) |
+| GET | `/api/subscribe/qr?token=<id>&sub_type=ss` | QR code PNG of subscription URL |
+| GET | `/api/metrics` | Prometheus metrics |
+| GET | `/api/docs` | API documentation page |
 | GET | `/api/proxy_configs/<node_id>` | node config for backends (X-API-Token auth) |
 | POST | `/api/proxy_configs/<node_id>` | traffic report + heartbeat from backends |
 | POST | `/api/user/settings` | change ss password |
@@ -154,6 +161,10 @@ One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gu
 - [x] Sample backend agent (panel ↔ backend loop)
 - [x] Admin analytics + CSV exports
 - [x] Login rate limiting
+- [x] QR code subscriptions
+- [x] Prometheus metrics
+- [x] Webhooks (order.paid)
+- [x] API docs page
 - [x] Docker + CI
 - [ ] Real Alipay/Stripe integration
 - [ ] Multi-language i18n
@@ -166,7 +177,7 @@ One-click deploys: [Render](render.yaml) or [Railway](railway.json). Both use gu
 .venv/Scripts/python -m pytest tests/ -v
 ```
 
-33 tests covering: seed data, invite-code registration, login/logout, daily check-in, traffic overflow auto-disable, subscription generation (ss/v2ray/clash), level gating, order lifecycle, payment callback, API auth, admin-only routes, admin CRUD, node heartbeat, admin analytics, CSV exports, login rate limiting, page rendering.
+38 tests covering: seed data, invite-code registration, login/logout, daily check-in, traffic overflow auto-disable, subscription generation (ss/v2ray/clash), level gating, order lifecycle, payment callback, API auth, admin-only routes, admin CRUD, node heartbeat, admin analytics, CSV exports, login rate limiting, QR codes, Prometheus metrics, webhooks, API docs, page rendering.
 
 ## License
 

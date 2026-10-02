@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1>API Documentation</h1>
+<p class="sub">FluxGate exposes a JSON API for clients, backends, and admins.</p>
+
+<div class="card">
+  <h2>Authentication</h2>
+  <p style="font-size:14px;color:var(--muted)">Backend endpoints use the <code class="mono">X-API-Token</code> header. Admin endpoints require an admin session cookie.</p>
+</div>
+
+<div class="card">
+  <h2>Public endpoints</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td>GET</td><td class="mono">/api/subscribe?token=&lt;id&gt;&amp;sub_type=ss</td><td>Subscription links (ss/v2ray/trojan/clash)</td></tr>
+    <tr><td>GET</td><td class="mono">/api/subscribe/qr?token=&lt;id&gt;&amp;sub_type=ss</td><td>QR code PNG of the subscription URL</td></tr>
+    <tr><td>GET</td><td class="mono">/api/proxy_configs/&lt;node_id&gt;</td><td>Node config for backends (X-API-Token)</td></tr>
+    <tr><td>POST</td><td class="mono">/api/proxy_configs/&lt;node_id&gt;</td><td>Traffic report + heartbeat (X-API-Token)</td></tr>
+    <tr><td>GET</td><td class="mono">/api/metrics</td><td>Prometheus metrics</td></tr>
+    <tr><td>GET</td><td class="mono">/api/docs</td><td>This page</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>User endpoints (session)</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td>POST</td><td class="mono">/api/user/settings</td><td>Change ss password</td></tr>
+    <tr><td>GET</td><td class="mono">/api/user/stats/traffic_chart</td><td>7-day traffic chart data</td></tr>
+    <tr><td>GET</td><td class="mono">/api/user/stats/ref_chart</td><td>Referral chart data</td></tr>
+    <tr><td>POST</td><td class="mono">/api/checkin</td><td>Daily check-in reward</td></tr>
+    <tr><td>POST</td><td class="mono">/api/orders</td><td>Create order (body: goods_id)</td></tr>
+    <tr><td>POST</td><td class="mono">/api/callback/alipay</td><td>Payment callback (body: out_trade_no)</td></tr>
+    <tr><td>POST</td><td class="mono">/api/gen/invitecode</td><td>Generate invite codes</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Admin endpoints (admin session)</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td>GET</td><td class="mono">/api/system_status</td><td>Users/orders/revenue/online nodes</td></tr>
+    <tr><td>GET</td><td class="mono">/api/admin/analytics?days=14</td><td>Revenue + signup trends</td></tr>
+    <tr><td>GET</td><td class="mono">/api/admin/export/users</td><td>CSV of users</td></tr>
+    <tr><td>GET</td><td class="mono">/api/admin/export/orders</td><td>CSV of orders</td></tr>
+    <tr><td>POST</td><td class="mono">/api/admin/nodes</td><td>Add node</td></tr>
+    <tr><td>DELETE</td><td class="mono">/api/admin/nodes/&lt;id&gt;</td><td>Delete node</td></tr>
+    <tr><td>POST</td><td class="mono">/api/admin/nodes/&lt;id&gt;/toggle</td><td>Enable/disable node</td></tr>
+    <tr><td>POST</td><td class="mono">/api/admin/goods</td><td>Add goods</td></tr>
+    <tr><td>DELETE</td><td class="mono">/api/admin/goods/&lt;id&gt;</td><td>Delete goods</td></tr>
+    <tr><td>POST</td><td class="mono">/api/admin/users/&lt;id&gt;/toggle</td><td>Enable/disable user</td></tr>
+    <tr><td>POST</td><td class="mono">/api/admin/users/&lt;id&gt;/reset_traffic</td><td>Reset user traffic</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Example: backend traffic report</h2>
+  <div class="codebox">curl -X POST http://localhost:5000/api/proxy_configs/1 \
+  -H "X-API-Token: dev-api-token" \
+  -H "Content-Type: application/json" \
+  -d '{"data":[{"user_id":2,"upload":1048576,"download":2097152}]}'</div>
+</div>
+
+<div class="card">
+  <h2>Webhooks</h2>
+  <p style="font-size:14px;color:var(--muted)">Set <code class="mono">WEBHOOK_URL</code> to receive <code class="mono">order.paid</code> events on every completed payment.</p>
+  <div class="codebox">{"event":"order.paid","out_trade_no":"202610020743237386","amount":5.0,"user_id":2,"timestamp":"2026-10-02T07:43:23"}</div>
+</div>
+{% endblock %}

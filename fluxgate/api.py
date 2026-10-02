@@ -13,8 +13,9 @@ Endpoints:
   GET  /api/system_status                    admin dashboard stats
 """
 from datetime import datetime, timedelta
+import json
 
-from flask import Blueprint, current_app, jsonify, request, session
+from flask import Blueprint, current_app, jsonify, render_template, request, session
 
 from . import db, GB
 from .models import Goods, InviteCode, User, UserCheckInLog, UserOrder, UserRefLog
@@ -53,6 +54,25 @@ def subscribe():
         return body, 200, {"Content-Type": "text/plain; charset=utf-8"}
     except Exception as e:
         return f"error: {e}", 500
+
+
+@bp.route("/subscribe/qr")
+def subscribe_qr():
+    """QR code PNG for the subscription URL (any sub_type)."""
+    token = request.args.get("token", "")
+    user = User.query.filter_by(id=int(token)).first() if token.isdigit() else None
+    if not user:
+        return "not found", 404
+    sub_type = request.args.get("sub_type", "ss")
+    url = f"{current_app.config['HOST']}/api/subscribe?token={token}&sub_type={sub_type}"
+    import io
+    import qrcode
+    img = qrcode.make(url)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    from flask import Response
+    return Response(buf.getvalue(), mimetype="image/png")
 
 
 @bp.route("/proxy_configs/<int:node_id>", methods=["GET", "POST"])
@@ -180,7 +200,35 @@ def alipay_callback():
     order = UserOrder.finish_order(out_trade_no)
     if not order:
         return jsonify({"error": "order not found or already finished"}), 404
+    _fire_webhook(order)
     return jsonify({"status": "success", "order": order.to_dict()})
+
+
+def _fire_webhook(order):
+    """POST the paid order to WEBHOOK_URL (fire-and-forget, non-blocking)."""
+    url = current_app.config.get("WEBHOOK_URL", "")
+    if not url:
+        return
+    import threading
+    import urllib.request
+
+    payload = json.dumps({
+        "event": "order.paid",
+        "out_trade_no": order.out_trade_no,
+        "amount": order.amount,
+        "user_id": order.user_id,
+        "timestamp": datetime.utcnow().isoformat(),
+    }).encode()
+
+    def _send():
+        try:
+            req = urllib.request.Request(url, data=payload,
+                                         headers={"Content-Type": "application/json"})
+            urllib.request.urlopen(req, timeout=5)
+        except Exception:
+            pass  # fire-and-forget; don't fail the callback
+
+    threading.Thread(target=_send, daemon=True).start()
 
 
 @bp.route("/gen/invitecode", methods=["POST"])
@@ -195,6 +243,46 @@ def gen_invitecode():
     user.invitecode_num -= num
     db.session.commit()
     return jsonify({"status": "success", "codes": [c.code for c in codes]})
+
+
+@bp.route("/metrics")
+def metrics():
+    """Prometheus-format metrics for scraping."""
+    from flask import Response
+    total_users = User.query.count()
+    total_orders = UserOrder.query.count()
+    paid_orders = UserOrder.query.filter(UserOrder.status == UserOrder.STATUS_FINISHED).count()
+    revenue = db.session.query(db.func.sum(UserOrder.amount)).filter(
+        UserOrder.status == UserOrder.STATUS_FINISHED).scalar() or 0.0
+    total_traffic = sum(n.used_traffic or 0 for n in ProxyNode.query.all())
+    online_nodes = sum(1 for n in ProxyNode.query.all() if n.is_online())
+    lines = [
+        "# HELP fluxgate_users_total Total registered users",
+        "# TYPE fluxgate_users_total gauge",
+        f"fluxgate_users_total {total_users}",
+        "# HELP fluxgate_orders_total Total orders created",
+        "# TYPE fluxgate_orders_total counter",
+        f"fluxgate_orders_total {total_orders}",
+        "# HELP fluxgate_orders_paid_total Paid (finished) orders",
+        "# TYPE fluxgate_orders_paid_total counter",
+        f"fluxgate_orders_paid_total {paid_orders}",
+        "# HELP fluxgate_revenue_total Revenue from paid orders (currency units)",
+        "# TYPE fluxgate_revenue_total counter",
+        f"fluxgate_revenue_total {revenue:.2f}",
+        "# HELP fluxgate_traffic_bytes_total Total traffic relayed across nodes",
+        "# TYPE fluxgate_traffic_bytes_total counter",
+        f"fluxgate_traffic_bytes_total {total_traffic}",
+        "# HELP fluxgate_nodes_online Number of nodes reporting heartbeat",
+        "# TYPE fluxgate_nodes_online gauge",
+        f"fluxgate_nodes_online {online_nodes}",
+    ]
+    return Response("\n".join(lines) + "\n", mimetype="text/plain; version=0.0.4")
+
+
+@bp.route("/docs")
+def api_docs():
+    """Human-readable API documentation page."""
+    return render_template("docs.html", user=_current_user())
 
 
 @bp.route("/system_status")
