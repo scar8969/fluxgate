@@ -4,6 +4,7 @@
   <h1>Register</h1>
   <p class="sub">Invite-code registration keeps bad actors out</p>
   <form method="post">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
     <label>Username</label>
     <input name="username" required autofocus>
     <label>Email</label>

@@ -25,8 +25,11 @@
 </div>
 
 <div class="card">
-  <h2>Users</h2>
-  <table>
+  <div class="row" style="justify-content:space-between">
+    <h2 style="margin:0">Users</h2>
+    <input id="userSearch" placeholder="Search users..." style="width:220px;margin:0">
+  </div>
+  <table id="usersTable" style="margin-top:12px">
     <tr><th>ID</th><th>Username</th><th>Port</th><th>Traffic</th><th>Level</th><th>Status</th><th>Actions</th></tr>
     {% for u in users %}
     <tr>
@@ -137,6 +140,13 @@ function delNode(id){ if(confirm('Delete node?')) return j(`/api/admin/nodes/${i
 function toggleUser(id){ return j(`/api/admin/users/${id}/toggle`, {method:'POST'}); }
 function resetTraffic(id){ return j(`/api/admin/users/${id}/reset_traffic`, {method:'POST'}); }
 function delGoods(id){ if(confirm('Delete goods?')) return j(`/api/admin/goods/${id}`, {method:'DELETE'}); }
+// user search filter
+document.getElementById('userSearch').addEventListener('input', e => {
+  const q = e.target.value.toLowerCase();
+  document.querySelectorAll('#usersTable tr').forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+});
 // analytics chart (revenue + signups, 14 days)
 fetch('/api/admin/analytics').then(r=>r.json()).then(d=>{
   const cv = document.getElementById('analyticsChart');

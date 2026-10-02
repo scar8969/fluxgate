@@ -4,6 +4,7 @@
   <h1>Sign in</h1>
   <p class="sub">Welcome back — enter your credentials</p>
   <form method="post">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
     <label>Username</label>
     <input name="username" required autofocus>
     <label>Password</label>

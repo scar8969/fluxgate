@@ -14,6 +14,14 @@ bp = Blueprint("web", __name__)
 _login_attempts = {}
 
 
+def _csrf_token():
+    """Get-or-create a per-session CSRF token."""
+    import secrets
+    if "_csrf" not in session:
+        session["_csrf"] = secrets.token_hex(16)
+    return session["_csrf"]
+
+
 def _rate_limited(ip: str, limit: int = 5, window: int = 300) -> bool:
     """True if the IP has exceeded `limit` login attempts in `window` seconds."""
     now = datetime.utcnow()
@@ -43,6 +51,9 @@ def index():
 @bp.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
+        if not session.get("_csrf") or (request.form.get("_csrf") or "") != session["_csrf"]:
+            flash("Invalid form token — refresh and try again", "error")
+            return render_template("register.html", ref=request.args.get("ref", "")), 400
         username = request.form.get("username", "").strip()
         email = request.form.get("email", "").strip()
         password = request.form.get("password", "")
@@ -68,6 +79,9 @@ def register():
 def login():
     ip = request.remote_addr or "unknown"
     if request.method == "POST":
+        if not session.get("_csrf") or (request.form.get("_csrf") or "") != session["_csrf"]:
+            flash("Invalid form token — refresh and try again", "error")
+            return render_template("login.html"), 400
         if _rate_limited(ip):
             flash("Too many attempts — try again in 5 minutes", "error")
             return render_template("login.html"), 429

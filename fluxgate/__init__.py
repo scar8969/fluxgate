@@ -33,6 +33,10 @@ def create_app(config=None):
     app.config["TELEGRAM_BOT_TOKEN"] = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     app.config["TELEGRAM_CHAT_ID"] = os.environ.get("TELEGRAM_CHAT_ID", "")
     app.config["PAYMENT_PROVIDER"] = os.environ.get("PAYMENT_PROVIDER", "demo")  # demo | stripe
+    # session security
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = os.environ.get("COOKIE_SECURE", "0") == "1"
     if config:
         app.config.update(config)
 
@@ -42,6 +46,10 @@ def create_app(config=None):
     from .web import bp as web_bp
     app.register_blueprint(api_bp, url_prefix="/api")
     app.register_blueprint(web_bp)
+
+    # expose CSRF token to templates
+    from .web import _csrf_token
+    app.jinja_env.globals["csrf_token"] = _csrf_token
 
     with app.app_context():
         db.create_all()

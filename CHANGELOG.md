@@ -5,6 +5,14 @@ All notable changes to FluxGate.
 ## [Unreleased]
 
 ### Added
+- CSRF protection (token-validated forms) + secure session cookies (HttpOnly, SameSite=Lax)
+- OpenAPI 3.0 spec (`/api/openapi.json`) + Swagger UI (`/api/swagger`)
+- SVG favicon, pyproject.toml, Makefile
+- Admin user search (client-side filter)
+
+## [0.6.0] - 2026-10-02
+
+### Added
 - Landing page at `/` (hero, features, pricing preview)
 - `/api/health` liveness probe + VERSION constant
 - Stargazers badge, landing screenshot

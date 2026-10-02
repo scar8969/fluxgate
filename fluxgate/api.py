@@ -396,6 +396,19 @@ def api_docs():
     return render_template("docs.html", user=_current_user())
 
 
+@bp.route("/openapi.json")
+def openapi_json():
+    """OpenAPI 3.0 spec."""
+    from .openapi import SPEC
+    return jsonify(SPEC)
+
+
+@bp.route("/swagger")
+def swagger_ui():
+    """Swagger UI (CDN) for the OpenAPI spec."""
+    return render_template("swagger.html", user=_current_user())
+
+
 @bp.route("/system_status")
 def system_status():
     user = _current_user()

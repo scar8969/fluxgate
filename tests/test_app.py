@@ -40,7 +40,10 @@ def client(app):
 
 
 def _login(client, username="demo", password="demo123"):
-    return client.post("/login", data={"username": username, "password": password})
+    client.get("/login")  # seed session CSRF token
+    with client.session_transaction() as s:
+        token = s.get("_csrf", "")
+    return client.post("/login", data={"username": username, "password": password, "_csrf": token})
 
 
 # ---------- core model tests ----------
@@ -65,7 +68,10 @@ def test_user_register_with_invite(app):
 
 
 def test_register_duplicate_username(app, client):
-    r = client.post("/register", data={"username": "demo", "email": "x@x.com", "password": "x"})
+    client.get("/register")
+    with client.session_transaction() as s:
+        token = s.get("_csrf", "")
+    r = client.post("/register", data={"username": "demo", "email": "x@x.com", "password": "x", "_csrf": token})
     assert "Username already exists" in r.get_data(as_text=True)
 
 
@@ -349,9 +355,12 @@ def test_admin_export_requires_admin(app, client):
 # ---------- login rate limiting ----------
 
 def test_login_rate_limit(app, client):
+    client.get("/login")
+    with client.session_transaction() as s:
+        token = s.get("_csrf", "")
     for _ in range(5):
-        client.post("/login", data={"username": "demo", "password": "wrong"})
-    r = client.post("/login", data={"username": "demo", "password": "demo123"})
+        client.post("/login", data={"username": "demo", "password": "wrong", "_csrf": token})
+    r = client.post("/login", data={"username": "demo", "password": "demo123", "_csrf": token})
     assert r.status_code == 429
     assert "Too many attempts" in r.get_data(as_text=True)
 
@@ -416,7 +425,7 @@ def test_webhook_fires_on_paid(app):
     try:
         app.config["WEBHOOK_URL"] = f"http://127.0.0.1:{port}/hook"
         with app.test_client() as c:
-            c.post("/login", data={"username": "demo", "password": "demo123"})
+            _login(c)
             r = c.post("/api/orders", json={"goods_id": 1})
             out_trade_no = r.get_json()["order"]["out_trade_no"]
             c.post("/api/callback/alipay", json={"out_trade_no": out_trade_no})
@@ -578,7 +587,7 @@ def test_telegram_notify_fires(app):
         app.config["TELEGRAM_BOT_TOKEN"] = "test-token"
         app.config["TELEGRAM_CHAT_ID"] = "123"
         with app.test_client() as c:
-            c.post("/login", data={"username": "demo", "password": "demo123"})
+            _login(c)
             r = c.post("/api/orders", json={"goods_id": 1})
             out_trade_no = r.get_json()["order"]["out_trade_no"]
             c.post("/api/callback/alipay", json={"out_trade_no": out_trade_no})
@@ -625,9 +634,12 @@ def test_change_password(app, client):
     assert r.get_json()["status"] == "success"
     # old password no longer works
     client.get("/logout")
-    r = client.post("/login", data={"username": "demo", "password": "demo123"})
+    client.get("/login")  # reseed CSRF after logout
+    with client.session_transaction() as s:
+        token = s.get("_csrf", "")
+    r = client.post("/login", data={"username": "demo", "password": "demo123", "_csrf": token})
     assert "Invalid username or password" in r.get_data(as_text=True)
-    r = client.post("/login", data={"username": "demo", "password": "newpass1"})
+    r = client.post("/login", data={"username": "demo", "password": "newpass1", "_csrf": token})
     assert r.status_code == 302
 
 
@@ -701,6 +713,66 @@ def test_change_password_short(app, client):
     r = client.post("/api/user/password", json={"current_password": "demo123", "new_password": "abc"})
     assert r.status_code == 400
     assert "too short" in r.get_json()["title"].lower()
+
+
+# ---------- security / openapi / swagger ----------
+
+def test_login_requires_csrf(app, client):
+    """POST without CSRF token is rejected."""
+    r = client.post("/login", data={"username": "demo", "password": "demo123"})
+    assert r.status_code == 400
+    assert "Invalid form token" in r.get_data(as_text=True)
+
+
+def test_login_with_csrf(app, client):
+    # GET login page to seed the session CSRF token
+    client.get("/login")
+    with client.session_transaction() as s:
+        token = s["_csrf"]
+    r = client.post("/login", data={"username": "demo", "password": "demo123", "_csrf": token})
+    assert r.status_code == 302
+
+
+def test_register_requires_csrf(app, client):
+    r = client.post("/register", data={"username": "x", "password": "y"})
+    assert r.status_code == 400
+
+
+def test_session_cookie_flags(app, client):
+    # first GET renders login (csrf_token() modifies session) -> Set-Cookie emitted
+    r = client.get("/login")
+    set_cookie = r.headers.get("Set-Cookie", "")
+    assert "HttpOnly" in set_cookie
+    assert "SameSite=Lax" in set_cookie
+
+
+def test_openapi_spec(app, client):
+    r = client.get("/api/openapi.json")
+    assert r.status_code == 200
+    d = r.get_json()
+    assert d["openapi"] == "3.0.3"
+    assert "/api/subscribe" in d["paths"]
+    assert "ApiToken" in d["components"]["securitySchemes"]
+
+
+def test_swagger_ui(app, client):
+    r = client.get("/api/swagger")
+    assert r.status_code == 200
+    assert "SwaggerUIBundle" in r.get_data(as_text=True)
+
+
+def test_favicon(app, client):
+    r = client.get("/static/favicon.svg")
+    assert r.status_code == 200
+    assert b"<svg" in r.data
+
+
+def test_admin_page_has_search(app, client):
+    _login(client, "admin", "admin123")
+    r = client.get("/admin")
+    html = r.get_data(as_text=True)
+    assert 'id="userSearch"' in html
+    assert 'id="usersTable"' in html
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ config.TITLE }} - {{ title or '' }}</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
 <style>
 :root { --bg:#0f1115; --card:#171a21; --border:#232733; --text:#e6e9ef; --muted:#8b93a3; --accent:#4f8cff; --green:#3ddc84; --red:#ff5c5c; }
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -56,6 +57,7 @@ h1 { font-size:22px; margin-bottom:4px; } h2 { font-size:18px; margin-bottom:14p
   <a href="{{ url_for('web.dashboard') }}">Dashboard</a>
   <a href="{{ url_for('web.shop') }}">Shop</a>
   <a href="/api/docs">API Docs</a>
+  <a href="/api/swagger">Swagger</a>
   {% if user and user.is_admin %}<a href="{{ url_for('web.admin') }}">Admin</a>{% endif %}
   <div class="spacer"></div>
   <div class="user-chip">{{ user.username if user else '' }} · <a href="{{ url_for('web.logout') }}">Logout</a></div>
