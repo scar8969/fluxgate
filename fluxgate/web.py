@@ -84,6 +84,8 @@ def register():
             flash(str(e), "error")
             return render_template("register.html", ref=ref)
         session["user_id"] = user.id
+        from .mail import notify_registered
+        notify_registered(user)
         return redirect(url_for("web.dashboard"))
     return render_template("register.html", ref=request.args.get("ref", ""))
 

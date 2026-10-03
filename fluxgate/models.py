@@ -197,6 +197,20 @@ class InviteCode(db.Model):
         db.session.commit()
         return codes
 
+    @classmethod
+    def random_code(cls):
+        return _short_rand(8)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "code": self.code,
+            "user_id": self.user_id,
+            "consumed": self.consumed,
+            "consumed_by": self.consumed_by,
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+        }
+
 
 class UserRefLog(db.Model):
     __tablename__ = "user_ref_logs"

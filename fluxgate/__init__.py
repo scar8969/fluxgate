@@ -32,6 +32,12 @@ def create_app(config=None):
     app.config["WEBHOOK_URL"] = os.environ.get("WEBHOOK_URL", "")  # optional paid-order webhook
     app.config["TELEGRAM_BOT_TOKEN"] = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     app.config["TELEGRAM_CHAT_ID"] = os.environ.get("TELEGRAM_CHAT_ID", "")
+    # SMTP (optional — no-op when unset)
+    app.config["SMTP_HOST"] = os.environ.get("SMTP_HOST", "")
+    app.config["SMTP_PORT"] = os.environ.get("SMTP_PORT", "587")
+    app.config["SMTP_USER"] = os.environ.get("SMTP_USER", "")
+    app.config["SMTP_PASSWORD"] = os.environ.get("SMTP_PASSWORD", "")
+    app.config["MAIL_FROM"] = os.environ.get("MAIL_FROM", "fluxgate@localhost")
     app.config["PAYMENT_PROVIDER"] = os.environ.get("PAYMENT_PROVIDER", "demo")  # demo | stripe
     # session security
     app.config["SESSION_COOKIE_HTTPONLY"] = True

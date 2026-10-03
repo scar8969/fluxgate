@@ -965,5 +965,57 @@ def test_security_files(app, client):
     assert r.status_code == 200 and "Contact:" in r.get_data(as_text=True)
 
 
+# ---------- mail / invite admin / node traffic ----------
+
+def test_mail_noop_without_smtp(app, client):
+    """send_mail returns False gracefully when SMTP unset."""
+    from fluxgate.mail import send_mail
+    with app.app_context():
+        assert send_mail("x@example.com", "subj", "body") is False
+
+
+def test_mail_sends_with_smtp(app, client):
+    """send_mail attempts SMTP when configured (fails gracefully)."""
+    app.config["SMTP_HOST"] = "127.0.0.1"
+    app.config["SMTP_PORT"] = "1"  # nothing listening -> exception -> False
+    from fluxgate.mail import send_mail
+    with app.app_context():
+        assert send_mail("x@example.com", "subj", "body") is False
+
+
+def test_admin_invite_crud(app, client):
+    _login(client, "admin", "admin123")
+    r = client.post("/api/admin/invites", json={"count": 3})
+    assert r.status_code == 200
+    codes = r.get_json()["codes"]
+    assert len(codes) == 3
+    assert all(c["code"] for c in codes)
+    # list
+    listed = client.get("/api/admin/invites").get_json()["codes"]
+    assert len(listed) >= 3
+    # delete one
+    cid = codes[0]["id"]
+    assert client.delete(f"/api/admin/invites/{cid}").status_code == 200
+    # audit recorded
+    entries = client.get("/api/admin/audit").get_json()["entries"]
+    assert any(e["action"] == "invite.create" for e in entries)
+
+
+def test_admin_invite_requires_admin(app, client):
+    _login(client, "demo", "demo123")
+    assert client.get("/api/admin/invites").status_code == 403
+    assert client.post("/api/admin/invites", json={"count": 1}).status_code == 403
+
+
+def test_node_traffic_endpoint(app, client):
+    _login(client)
+    r = client.get("/api/traffic/node/1")
+    assert r.status_code == 200
+    d = r.get_json()
+    assert d["node_id"] == 1
+    assert "series" in d
+    assert client.get("/api/traffic/node/999").status_code == 200  # no logs -> empty
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

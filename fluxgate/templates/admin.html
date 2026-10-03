@@ -115,6 +115,19 @@
 </div>
 
 <div class="card">
+  <h2>Invite codes</h2>
+  <div class="row" style="justify-content:space-between">
+    <div class="row">
+      <input id="inviteCount" type="number" min="1" max="50" value="5" style="width:80px;margin:0">
+      <button class="btn" onclick="genInvites()">Generate</button>
+    </div>
+  </div>
+  <table id="inviteTable" style="margin-top:12px">
+    <tr><th>Code</th><th>Created</th><th>Used</th><th>By</th><th></th></tr>
+  </table>
+</div>
+
+<div class="card">
   <h2>Audit log</h2>
   <table id="auditTable">
     <tr><th>Time</th><th>Admin</th><th>Action</th><th>Detail</th></tr>
@@ -178,6 +191,29 @@ fetch('/api/admin/analytics').then(r=>r.json()).then(d=>{
   line(d.revenue, '#3ddc84');
   line(d.users, '#4f8cff');
 });
+// invite codes
+function genInvites(){
+  const n = document.getElementById('inviteCount').value || 5;
+  fetch('/api/admin/invites', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({count:n})})
+    .then(r=>r.json()).then(()=>loadInvites());
+}
+function delInvite(id){
+  fetch('/api/admin/invites/'+id, {method:'DELETE'}).then(()=>loadInvites());
+}
+function loadInvites(){
+  fetch('/api/admin/invites').then(r=>r.json()).then(d=>{
+    const tb = document.getElementById('inviteTable');
+    tb.querySelectorAll('tr:not(:first-child)').forEach(tr=>tr.remove());
+    (d.codes||[]).forEach(c=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td><code>${c.code}</code></td><td>${(c.created_at||'').slice(0,10)}</td>
+        <td>${c.consumed?'yes':'no'}</td><td>${c.consumed_by||''}</td>
+        <td><button class="btn red" style="padding:2px 8px;font-size:11px" onclick="delInvite(${c.id})">Delete</button></td>`;
+      tb.appendChild(tr);
+    });
+  });
+}
+loadInvites();
 // audit log
 fetch('/api/admin/audit?limit=20').then(r=>r.json()).then(d=>{
   const tb = document.getElementById('auditTable');

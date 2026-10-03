@@ -5,6 +5,14 @@ All notable changes to FluxGate.
 ## [Unreleased]
 
 ### Added
+- Email notifications (SMTP: order-paid receipts, welcome mail; no-op when unset)
+- Invite-code admin management (create/list/delete + UI)
+- Per-node traffic API (`/api/traffic/node/<id>`)
+- Mermaid architecture diagram in README
+
+## [0.11.0] - 2026-10-02
+
+### Added
 - `fluxgate` CLI (users/nodes/goods/orders/backup/restore/stats)
 - TOTP 2FA (RFC 6238, zero deps) + login enforcement
 - Rate-limit headers (X-RateLimit-*)

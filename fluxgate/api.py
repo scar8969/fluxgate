@@ -203,6 +203,32 @@ def user_2fa_status():
     return jsonify({"enabled": bool(user.totp_secret)})
 
 
+@bp.route("/traffic/node/<int:node_id>")
+def node_traffic(node_id):
+    """Per-node traffic for the current user (last 7 days)."""
+    user = _current_user()
+    if not user:
+        return jsonify({"error": "login required"}), 401
+    from datetime import datetime as _dt, timedelta as _td
+    days = min(request.args.get("days", 7, type=int), 30)
+    since = _dt.utcnow() - _td(days=days)
+    logs = UserTrafficLog.query.filter(
+        UserTrafficLog.user_id == user.id,
+        UserTrafficLog.node_id == node_id,
+        UserTrafficLog.created_at >= since,
+    ).all()
+    # bucket by day
+    buckets = {}
+    for l in logs:
+        day = l.created_at.date().isoformat() if l.created_at else ""
+        b = buckets.setdefault(day, {"upload": 0, "download": 0})
+        b["upload"] += l.upload or 0
+        b["download"] += l.download or 0
+    return jsonify({"node_id": node_id, "days": days,
+                    "series": [{"date": d, **buckets.get(d, {"upload": 0, "download": 0})}
+                               for d in sorted(buckets)]})
+
+
 @bp.route("/user/settings", methods=["POST"])
 def user_settings():
     user = _current_user()
@@ -335,6 +361,12 @@ def alipay_callback():
         return jsonify({"error": "order not found or already finished"}), 404
     _fire_webhook(order)
     _notify_telegram(order)
+    # email receipt (no-op if SMTP unset)
+    from .mail import notify_order_paid
+    user = User.query.get(order.user_id)
+    goods = Goods.query.get(order.goods_id)
+    if user and goods:
+        notify_order_paid(user, order, goods)
     return jsonify({"status": "success", "order": order.to_dict()})
 
 
@@ -717,6 +749,47 @@ def admin_export_orders():
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=orders.csv"},
     )
+
+
+@bp.route("/admin/invites", methods=["GET"])
+def admin_invites():
+    """List invite codes (admin)."""
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    codes = InviteCode.query.order_by(InviteCode.id.desc()).limit(100).all()
+    return jsonify({"codes": [c.to_dict() for c in codes]})
+
+
+@bp.route("/admin/invites", methods=["POST"])
+def admin_invite_create():
+    """Create N invite codes (admin)."""
+    admin = _admin_required()
+    if not admin:
+        return jsonify({"error": "admin required"}), 403
+    n = request.get_json(force=True, silent=True) or {}
+    count = max(1, min(int(n.get("count", 1)), 100))
+    codes = []
+    for _ in range(count):
+        code = InviteCode(code=InviteCode.random_code(), user_id=admin.id)
+        db.session.add(code)
+        codes.append(code)
+    db.session.commit()
+    _audit("invite.create", f"{count} codes")
+    return jsonify({"status": "success", "codes": [c.to_dict() for c in codes]})
+
+
+@bp.route("/admin/invites/<int:code_id>", methods=["DELETE"])
+def admin_invite_delete(code_id):
+    """Delete an invite code (admin)."""
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    code = InviteCode.query.get(code_id)
+    if not code:
+        return jsonify({"error": "not found"}), 404
+    db.session.delete(code)
+    db.session.commit()
+    _audit("invite.delete", f"#{code_id}")
+    return jsonify({"status": "success"})
 
 
 @bp.route("/admin/audit")
