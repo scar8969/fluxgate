@@ -5,6 +5,14 @@ All notable changes to FluxGate.
 ## [Unreleased]
 
 ### Added
+- `fluxgate` CLI (users/nodes/goods/orders/backup/restore/stats)
+- TOTP 2FA (RFC 6238, zero deps) + login enforcement
+- Rate-limit headers (X-RateLimit-*)
+- security.txt + robots.txt
+
+## [0.10.0] - 2026-10-02
+
+### Added
 - Security headers (CSP, X-Frame-Options, nosniff)
 - API rate limiting (per-IP sliding window)
 - Audit log (admin action trail + UI)

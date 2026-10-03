@@ -9,6 +9,10 @@
     <input name="username" required autofocus>
     <label>Password</label>
     <input name="password" type="password" required>
+    {% if need_2fa %}
+    <label>2FA code (authenticator app)</label>
+    <input name="totp" inputmode="numeric" pattern="[0-9]{6}" placeholder="000000" required autofocus>
+    {% endif %}
     <button class="btn" style="width:100%">Sign in</button>
   </form>
   <p style="margin-top:14px;font-size:13px;color:var(--muted);text-align:center">

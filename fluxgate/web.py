@@ -102,6 +102,13 @@ def login():
         password = request.form.get("password", "")
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
+            if user.totp_secret:
+                # 2FA enabled: require code in this step
+                code = request.form.get("totp", "")
+                from .totp import verify
+                if not verify(user.totp_secret, code):
+                    flash("2FA code required or invalid", "error")
+                    return render_template("login.html", need_2fa=user.username), 200
             session["user_id"] = user.id
             return redirect(url_for("web.dashboard"))
         flash("Invalid username or password", "error")

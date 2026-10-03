@@ -52,6 +52,18 @@ def _rate_limit_api():
     return None
 
 
+@bp.after_app_request
+def _rate_limit_headers(resp):
+    """Expose rate-limit state on API responses."""
+    if request.path.startswith("/api/"):
+        ip = request.remote_addr or "unknown"
+        hits = len([t for t in _api_hits.get(ip, [])])
+        resp.headers["X-RateLimit-Limit"] = str(API_LIMIT)
+        resp.headers["X-RateLimit-Remaining"] = str(max(0, API_LIMIT - hits))
+        resp.headers["X-RateLimit-Reset"] = str(API_WINDOW)
+    return resp
+
+
 def _current_user():
     uid = session.get("user_id")
     if uid:
@@ -136,6 +148,59 @@ def proxy_configs(node_id):
             user.enable = False
     db.session.commit()
     return jsonify({})
+
+
+@bp.route("/user/2fa", methods=["POST"])
+def user_2fa_enable():
+    """Enable TOTP 2FA — returns secret + otpauth URI."""
+    user = _current_user()
+    if not user:
+        return jsonify({"error": "login required"}), 401
+    from .totp import generate_secret, provisioning_uri
+    if not user.totp_secret:
+        user.totp_secret = generate_secret()
+        db.session.commit()
+    return jsonify({
+        "status": "success",
+        "secret": user.totp_secret,
+        "uri": provisioning_uri(user.totp_secret, user.username),
+    })
+
+
+@bp.route("/user/2fa/verify", methods=["POST"])
+def user_2fa_verify():
+    """Verify a code against the user's TOTP secret."""
+    user = _current_user()
+    if not user:
+        return jsonify({"error": "login required"}), 401
+    code = (request.get_json(force=True, silent=True) or {}).get("code", "")
+    from .totp import verify
+    if verify(user.totp_secret, code):
+        return jsonify({"status": "success"})
+    return jsonify({"error": "invalid code"}), 400
+
+
+@bp.route("/user/2fa/disable", methods=["POST"])
+def user_2fa_disable():
+    """Disable TOTP 2FA (requires a valid code)."""
+    user = _current_user()
+    if not user:
+        return jsonify({"error": "login required"}), 401
+    code = (request.get_json(force=True, silent=True) or {}).get("code", "")
+    from .totp import verify
+    if not verify(user.totp_secret, code):
+        return jsonify({"error": "invalid code"}), 400
+    user.totp_secret = ""
+    db.session.commit()
+    return jsonify({"status": "success"})
+
+
+@bp.route("/user/2fa/status")
+def user_2fa_status():
+    user = _current_user()
+    if not user:
+        return jsonify({"error": "login required"}), 401
+    return jsonify({"enabled": bool(user.totp_secret)})
 
 
 @bp.route("/user/settings", methods=["POST"])

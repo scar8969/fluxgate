@@ -54,6 +54,7 @@ class User(db.Model):
     enable = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
     api_key = db.Column(db.String(64), default=_long_rand, unique=True)
+    totp_secret = db.Column(db.String(32), default="")  # base32 TOTP secret (empty = 2FA off)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # ---- class methods (mirror original) ----

@@ -875,5 +875,95 @@ def test_i18n_zh_nav(app, client):
     assert "仪表盘" in r.get_data(as_text=True)
 
 
+# ---------- TOTP / CLI / rate-limit headers / security files ----------
+
+def test_totp_rfc_vector():
+    """RFC 6238 test vector: secret GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ (ASCII '12345678901234567890')."""
+    import base64
+    from fluxgate.totp import _hotp
+    secret = base64.b32encode(b"12345678901234567890").decode().rstrip("=")
+    # RFC 6238 SHA1 vectors (counter 0..9)
+    expected = ["755224", "287082", "359152", "969429", "338314",
+                "254676", "287922", "162583", "399871", "520489"]
+    for i, want in enumerate(expected):
+        assert _hotp(secret, i) == want, f"counter {i}"
+
+
+def test_totp_verify_rejects_bad(app, client):
+    from fluxgate.totp import verify, generate_secret
+    secret = generate_secret()
+    assert verify(secret, "000000") is False
+    assert verify("", "123456") is False
+    assert verify(secret, "abc") is False
+
+
+def test_2fa_enable_flow(app, client):
+    _login(client)
+    r = client.post("/api/user/2fa")
+    assert r.status_code == 200
+    d = r.get_json()
+    assert d["secret"] and d["uri"].startswith("otpauth://totp/")
+    # status now enabled
+    assert client.get("/api/user/2fa/status").get_json()["enabled"] is True
+    # disable with wrong code fails
+    assert client.post("/api/user/2fa/disable", json={"code": "000000"}).status_code == 400
+    # disable with correct code (compute from secret)
+    from fluxgate.totp import _hotp
+    import time as _t
+    code = _hotp(d["secret"], int(_t.time()) // 30)
+    assert client.post("/api/user/2fa/disable", json={"code": code}).status_code == 200
+    assert client.get("/api/user/2fa/status").get_json()["enabled"] is False
+
+
+def test_2fa_login_requires_code(app, client):
+    # enable 2FA on demo
+    _login(client)
+    secret = client.post("/api/user/2fa").get_json()["secret"]
+    client.get("/logout")
+    # login without code -> rejected
+    client.get("/login")
+    with client.session_transaction() as s:
+        token = s["_csrf"]
+    r = client.post("/login", data={"username": "demo", "password": "demo123", "_csrf": token})
+    assert "2FA code required" in r.get_data(as_text=True)
+    # login with code -> ok
+    from fluxgate.totp import _hotp
+    import time as _t
+    code = _hotp(secret, int(_t.time()) // 30)
+    r = client.post("/login", data={"username": "demo", "password": "demo123", "_csrf": token, "totp": code})
+    assert r.status_code == 302
+
+
+def test_rate_limit_headers(app, client):
+    r = client.get("/api/health")
+    assert r.headers.get("X-RateLimit-Limit") == "120"
+    assert r.headers.get("X-RateLimit-Remaining") is not None
+    assert r.headers.get("X-RateLimit-Reset") == "60"
+
+
+def test_cli_stats(app):
+    import subprocess
+    import tempfile as _tf
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    tmpdb = _tf.NamedTemporaryFile(suffix=".db", delete=False)
+    tmpdb.close()
+    env = dict(os.environ, DATABASE_URL=f"sqlite:///{tmpdb.name}")
+    r = subprocess.run([sys.executable, "cli.py", "stats"], capture_output=True, text=True,
+                       cwd=repo, timeout=60, env=env)
+    try:
+        os.unlink(tmpdb.name)
+    except PermissionError:
+        pass
+    assert r.returncode == 0, r.stderr[-500:]
+    assert "users:" in r.stdout and "nodes:" in r.stdout
+
+
+def test_security_files(app, client):
+    r = client.get("/static/robots.txt")
+    assert r.status_code == 200 and "Disallow" in r.get_data(as_text=True)
+    r = client.get("/static/.well-known/security.txt")
+    assert r.status_code == 200 and "Contact:" in r.get_data(as_text=True)
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))
