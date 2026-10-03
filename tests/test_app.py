@@ -24,6 +24,8 @@ def app():
     })
     from fluxgate.web import _login_attempts
     _login_attempts.clear()  # fresh rate-limiter state per test
+    from fluxgate.api import _api_hits
+    _api_hits.clear()  # fresh API rate-limiter state per test
     yield app
     with app.app_context():
         db.session.remove()
@@ -827,6 +829,50 @@ def test_pages_workflow_exists(app):
     assert os.path.isfile(os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
         ".github/workflows/pages.yml"))
+
+
+# ---------- security headers / rate limit / audit / i18n ----------
+
+def test_security_headers(app, client):
+    r = client.get("/")
+    assert r.headers.get("X-Frame-Options") == "DENY"
+    assert r.headers.get("X-Content-Type-Options") == "nosniff"
+    assert "Content-Security-Policy" in r.headers
+    assert r.headers.get("Referrer-Policy") == "strict-origin-when-cross-origin"
+
+
+def test_api_rate_limit(app, client):
+    from fluxgate.api import _api_hits, API_LIMIT
+    _api_hits.clear()
+    # hit the limit
+    for _ in range(API_LIMIT):
+        client.post("/api/checkin")  # 401 without login but counts as a hit
+    r = client.post("/api/checkin")
+    assert r.status_code == 429
+    assert "rate limit" in r.get_json()["error"]
+
+
+def test_audit_log_records_admin_actions(app, client):
+    _login(client, "admin", "admin123")
+    client.post("/api/admin/nodes", json={"name": "SG-04", "server": "sg.example.com"})
+    r = client.get("/api/admin/audit")
+    assert r.status_code == 200
+    entries = r.get_json()["entries"]
+    assert any(e["action"] == "node.add" for e in entries)
+
+
+def test_audit_requires_admin(app, client):
+    _login(client, "demo", "demo123")
+    assert client.get("/api/admin/audit").status_code == 403
+
+
+def test_i18n_zh_nav(app, client):
+    _login(client)
+    r = client.get("/dashboard")
+    assert "仪表盘" not in r.get_data(as_text=True)  # EN default
+    client.set_cookie("lang", "zh")
+    r = client.get("/dashboard")
+    assert "仪表盘" in r.get_data(as_text=True)
 
 
 if __name__ == "__main__":

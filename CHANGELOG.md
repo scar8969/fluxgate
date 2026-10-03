@@ -5,6 +5,15 @@ All notable changes to FluxGate.
 ## [Unreleased]
 
 ### Added
+- Security headers (CSP, X-Frame-Options, nosniff)
+- API rate limiting (per-IP sliding window)
+- Audit log (admin action trail + UI)
+- i18n EN/ZH toggle
+- Slim multi-stage Dockerfile with healthcheck
+
+## [0.9.0] - 2026-10-02
+
+### Added
 - GitHub Pages live demo site (`docs/` + Pages workflow)
 - Admin backup/restore (full JSON export/import)
 - Dark/light theme toggle (cookie-based)

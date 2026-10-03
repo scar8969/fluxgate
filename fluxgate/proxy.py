@@ -138,3 +138,27 @@ class UserTrafficLog(db.Model):
         up = sum(l.upload for l in logs)
         down = sum(l.download for l in logs)
         return up, down
+
+
+class AuditLog(db.Model):
+    """Audit trail of admin actions."""
+    __tablename__ = "audit_logs"
+    id = db.Column(db.Integer, primary_key=True)
+    admin_id = db.Column(db.Integer, default=0)
+    action = db.Column(db.String(128), default="")
+    detail = db.Column(db.String(512), default="")
+    created_at = db.Column(db.DateTime, default=__import__("datetime").datetime.utcnow)
+
+    @classmethod
+    def log(cls, admin_id, action, detail=""):
+        db.session.add(cls(admin_id=admin_id, action=action, detail=detail))
+        db.session.commit()
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "admin_id": self.admin_id,
+            "action": self.action,
+            "detail": self.detail,
+            "created_at": self.created_at.isoformat() if self.created_at else "",
+        }

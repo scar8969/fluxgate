@@ -10,6 +10,19 @@ from .proxy import ProxyNode
 
 bp = Blueprint("web", __name__)
 
+# minimal i18n: EN (default) / ZH
+I18N = {
+    "zh": {
+        "dashboard": "仪表盘", "shop": "商品中心", "admin": "管理后台",
+        "logout": "退出", "sign_in": "登录", "register": "注册",
+    }
+}
+
+
+def _lang():
+    from flask import request as _req
+    return _req.cookies.get("lang", "en")
+
 # simple in-memory login rate limiter: {ip: [timestamps]}
 _login_attempts = {}
 

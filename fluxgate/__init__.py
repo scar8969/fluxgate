@@ -48,13 +48,32 @@ def create_app(config=None):
     app.register_blueprint(web_bp)
 
     # expose CSRF token to templates
-    from .web import _csrf_token
+    from .web import _csrf_token, _lang, I18N
     app.jinja_env.globals["csrf_token"] = _csrf_token
+
+    def _t(key):
+        return I18N.get(_lang(), {}).get(key, key)
+
+    app.jinja_env.globals["t"] = _t
 
     @app.context_processor
     def _inject():
         from flask import request as _req
         return {"theme": "light" if _req.cookies.get("theme") == "light" else "dark"}
+
+    @app.after_request
+    def _security_headers(resp):
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+        resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        resp.headers.setdefault("X-XSS-Protection", "1; mode=block")
+        # permissive CSP (self + inline styles/scripts + CDN for swagger)
+        resp.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:;",
+        )
+        return resp
 
     with app.app_context():
         db.create_all()

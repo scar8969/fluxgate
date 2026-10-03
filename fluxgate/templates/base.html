@@ -62,20 +62,26 @@ h1 { font-size:22px; margin-bottom:4px; } h2 { font-size:18px; margin-bottom:14p
 <nav class="nav">
   <div class="brand">⚡ {{ config.TITLE }}</div>
   {% if session.get('user_id') %}
-  <a href="{{ url_for('web.dashboard') }}">Dashboard</a>
-  <a href="{{ url_for('web.shop') }}">Shop</a>
+  <a href="{{ url_for('web.dashboard') }}">{{ t('dashboard') }}</a>
+  <a href="{{ url_for('web.shop') }}">{{ t('shop') }}</a>
   <a href="/api/docs">API Docs</a>
   <a href="/api/swagger">Swagger</a>
-  {% if user and user.is_admin %}<a href="{{ url_for('web.admin') }}">Admin</a>{% endif %}
+  {% if user and user.is_admin %}<a href="{{ url_for('web.admin') }}">{{ t('admin') }}</a>{% endif %}
   <div class="spacer"></div>
+  <button class="btn ghost" style="padding:4px 12px;font-size:12px" onclick="toggleLang()">🌐 {{ '中文' if theme == 'dark' else 'EN' }}</button>
   <button class="btn ghost" style="padding:4px 12px;font-size:12px" onclick="toggleTheme()">🌓 Theme</button>
-  <div class="user-chip">{{ user.username if user else '' }} · <a href="{{ url_for('web.logout') }}">Logout</a></div>
+  <div class="user-chip">{{ user.username if user else '' }} · <a href="{{ url_for('web.logout') }}">{{ t('logout') }}</a></div>
   {% endif %}
 </nav>
 <script>
 function toggleTheme(){
   const light = document.body.classList.toggle('light');
   document.cookie = 'theme=' + (light ? 'light' : 'dark') + ';path=/;max-age=31536000';
+}
+function toggleLang(){
+  const cur = document.cookie.indexOf('lang=zh') > -1 ? 'zh' : 'en';
+  document.cookie = 'lang=' + (cur === 'zh' ? 'en' : 'zh') + ';path=/;max-age=31536000';
+  location.reload();
 }
 </script>
 <div class="container">

@@ -21,10 +21,35 @@ from . import db, GB
 
 VERSION = "0.6.0"
 from .models import Goods, InviteCode, User, UserCheckInLog, UserOrder, UserRefLog
-from .proxy import ProxyNode, UserTrafficLog
+from .proxy import ProxyNode, UserTrafficLog, AuditLog
 from .sub import generate_clash_config, generate_subscription
 
 bp = Blueprint("api", __name__)
+
+# per-IP API rate limiter: {ip: [timestamps]} — 120 req / 60s
+_api_hits = {}
+API_LIMIT = 120
+API_WINDOW = 60
+
+
+def _api_rate_limited(ip: str) -> bool:
+    from datetime import datetime as _dt, timedelta as _td
+    now = _dt.utcnow()
+    hits = [t for t in _api_hits.get(ip, []) if now - t < _td(seconds=API_WINDOW)]
+    _api_hits[ip] = hits
+    if len(hits) >= API_LIMIT:
+        return True
+    hits.append(now)
+    return False
+
+
+@bp.before_app_request
+def _rate_limit_api():
+    if request.path.startswith("/api/") and request.method in ("POST", "PUT", "DELETE"):
+        ip = request.remote_addr or "unknown"
+        if _api_rate_limited(ip):
+            return jsonify({"error": "rate limit exceeded"}), 429
+    return None
 
 
 def _current_user():
@@ -444,6 +469,13 @@ def _admin_required():
     return user
 
 
+def _audit(action, detail=""):
+    """Record an admin action in the audit log."""
+    user = _current_user()
+    if user:
+        AuditLog.log(user.id, action, detail)
+
+
 @bp.route("/admin/nodes", methods=["POST"])
 def admin_add_node():
     if not _admin_required():
@@ -464,6 +496,7 @@ def admin_add_node():
     )
     db.session.add(node)
     db.session.commit()
+    _audit("node.add", node.name)
     return jsonify({"status": "success", "node": node.to_dict()})
 
 
@@ -476,6 +509,7 @@ def admin_delete_node(node_id):
         return jsonify({"error": "not found"}), 404
     db.session.delete(node)
     db.session.commit()
+    _audit("node.delete", f"#{node_id}")
     return jsonify({"status": "success"})
 
 
@@ -488,6 +522,7 @@ def admin_toggle_node(node_id):
         return jsonify({"error": "not found"}), 404
     node.enable = not node.enable
     db.session.commit()
+    _audit("node.toggle", f"#{node_id} enable={node.enable}")
     return jsonify({"status": "success", "enable": node.enable})
 
 
@@ -507,6 +542,7 @@ def admin_add_goods():
     )
     db.session.add(goods)
     db.session.commit()
+    _audit("goods.add", goods.name)
     return jsonify({"status": "success", "goods": goods.to_dict()})
 
 
@@ -519,6 +555,7 @@ def admin_delete_goods(goods_id):
         return jsonify({"error": "not found"}), 404
     db.session.delete(goods)
     db.session.commit()
+    _audit("goods.delete", f"#{goods_id}")
     return jsonify({"status": "success"})
 
 
@@ -531,6 +568,7 @@ def admin_toggle_user(user_id):
         return jsonify({"error": "not found"}), 404
     user.enable = not user.enable
     db.session.commit()
+    _audit("user.toggle", f"#{user_id} enable={user.enable}")
     return jsonify({"status": "success", "enable": user.enable})
 
 
@@ -544,6 +582,7 @@ def admin_reset_traffic(user_id):
     user.reset_traffic(user.total_traffic)
     user.enable = True
     db.session.commit()
+    _audit("user.reset_traffic", f"#{user_id}")
     return jsonify({"status": "success"})
 
 
@@ -615,6 +654,16 @@ def admin_export_orders():
     )
 
 
+@bp.route("/admin/audit")
+def admin_audit():
+    """Recent admin audit log entries (admin)."""
+    if not _admin_required():
+        return jsonify({"error": "admin required"}), 403
+    limit = min(request.args.get("limit", 50, type=int), 200)
+    entries = AuditLog.query.order_by(AuditLog.id.desc()).limit(limit).all()
+    return jsonify({"entries": [e.to_dict() for e in entries]})
+
+
 @bp.route("/admin/backup")
 def admin_backup():
     """Full JSON backup of users, nodes, goods, orders (admin)."""
@@ -682,6 +731,7 @@ def admin_restore():
                                  status=o.get("status", 0), amount=o.get("amount", 0),
                                  out_trade_no=o.get("out_trade_no", "")))
     db.session.commit()
+    _audit("backup.restore", f"{len(data.get('users', []))} users, {len(data.get('nodes', []))} nodes")
     return jsonify({"status": "success",
                     "restored": {"users": len(data.get("users", [])),
                                  "nodes": len(data.get("nodes", [])),
