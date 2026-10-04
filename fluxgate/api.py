@@ -462,8 +462,9 @@ def metrics():
     paid_orders = UserOrder.query.filter(UserOrder.status == UserOrder.STATUS_FINISHED).count()
     revenue = db.session.query(db.func.sum(UserOrder.amount)).filter(
         UserOrder.status == UserOrder.STATUS_FINISHED).scalar() or 0.0
-    total_traffic = sum(n.used_traffic or 0 for n in ProxyNode.query.all())
-    online_nodes = sum(1 for n in ProxyNode.query.all() if n.is_online())
+    nodes = ProxyNode.query.all()
+    total_traffic = sum(n.used_traffic or 0 for n in nodes)
+    online_nodes = sum(1 for n in nodes if n.is_online())
     lines = [
         "# HELP fluxgate_users_total Total registered users",
         "# TYPE fluxgate_users_total gauge",

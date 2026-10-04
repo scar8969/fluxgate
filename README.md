@@ -225,18 +225,21 @@ Live demo site: **[scar8969.github.io/fluxgate](https://scar8969.github.io/fluxg
 
 ## Performance
 
-Measured with `bench.py` against a local instance (500 requests, 20 concurrent, `/api/metrics`):
+Measured with `bench.py` against a local instance with simulated data (26 users, 67 orders):
 
-| Metric | Value |
-|---|---|
-| Throughput | **92 req/s** |
-| p50 latency | 204 ms |
-| p95 latency | 269 ms |
-| p99 latency | 286 ms |
-| Error rate | **0.0%** |
+| Endpoint | Throughput | Errors |
+|---|---|---|
+| `/api/health` | **223 req/s** | 0.0% |
+| `/api/login` (page) | **164 req/s** | 0.0% |
+| `/api/subscribe` (auth + sub gen) | **134 req/s** | 0.0% |
+| `/api/metrics` | **105 req/s** | 0.0% |
+| traffic report (write path) | **28 writes/s** | 0.0% |
+
+Stress: 2000 requests @ 100 concurrent → 0 errors. 6883 requests total, **zero 5xx**. The per-IP API rate limiter (120 POSTs/60s) throttles abuse with 429s — verified under load.
 
 ```bash
 .venv/Scripts/python bench.py --requests 500 --concurrency 20
+.venv/Scripts/python bench_write.py   # write-path load test
 ```
 
 ## Roadmap
